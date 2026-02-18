@@ -12,5 +12,5 @@ export default function SettingsPage() {
 
 async function SettingsData() {
   const result = await getTenantSettings()
-  return <SettingsPageClient initialSettings={result.data?.settings} businessType={result.data?.business_type} />
+  return <SettingsPageClient initialSettings={result.data?.settings as Record<string, unknown> | undefined} businessType={result.data?.business_type} tenantName={result.data?.tenant_name} />
 }

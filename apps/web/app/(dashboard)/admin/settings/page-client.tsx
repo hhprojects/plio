@@ -28,6 +28,7 @@ import { updateTenantSettings } from './actions'
 interface SettingsPageClientProps {
   initialSettings?: Record<string, unknown> | null
   businessType?: string
+  tenantName?: string
 }
 
 export function SettingsPageClient({ initialSettings }: SettingsPageClientProps) {
@@ -45,12 +46,11 @@ export function SettingsPageClient({ initialSettings }: SettingsPageClientProps)
 
   function handleSubmit() {
     startTransition(async () => {
-      const formData = new FormData()
-      formData.set('default_buffer_minutes', bufferMinutes)
-      formData.set('slot_interval_minutes', slotInterval)
-      formData.set('cancellation_window_hours', cancellationWindow)
-
-      const result = await updateTenantSettings(formData)
+      const result = await updateTenantSettings({
+        default_buffer_minutes: bufferMinutes,
+        slot_interval_minutes: slotInterval,
+        cancellation_window_hours: cancellationWindow,
+      })
       if (result.error) {
         toast.error(result.error)
       } else {
