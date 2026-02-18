@@ -48,6 +48,7 @@ export type PaymentStatus = 'pending_verification' | 'verified' | 'rejected';
 // ============================================================================
 
 export interface TenantSettings {
+  // Existing
   timezone?: string;
   currency?: string;
   cancellation_hours?: number;
@@ -57,6 +58,28 @@ export interface TenantSettings {
   default_buffer_minutes?: number;
   slot_interval_minutes?: number;
   cancellation_window_hours?: number;
+
+  // Feature Toggles (undefined = enabled)
+  credits_enabled?: boolean;
+  makeup_booking_enabled?: boolean;
+  qr_checkin_enabled?: boolean;
+
+  // Branding
+  accent_color?: string;
+
+  // Cancellation Policy
+  auto_refund_on_cancel?: boolean;
+
+  // Notifications
+  email_class_reminders?: boolean;
+  email_cancellation_notices?: boolean;
+  email_payment_receipts?: boolean;
+  reminder_hours_before?: number;
+
+  // Scheduling Rules
+  default_class_duration_minutes?: number;
+  max_students_per_class?: number;
+  booking_lead_time_hours?: number;
 }
 
 export interface AuditChanges {

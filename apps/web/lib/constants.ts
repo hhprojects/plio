@@ -63,3 +63,9 @@ export const SG_TIMEZONE = 'Asia/Singapore';
 export const DEFAULT_CANCELLATION_HOURS = 24;
 export const DEFAULT_GST_RATE = 9; // 9% GST
 export const DEFAULT_CURRENCY = 'SGD';
+
+// Tenant settings defaults
+export const DEFAULT_ACCENT_COLOR = '#6366f1';
+export const DEFAULT_REMINDER_HOURS_BEFORE = 24;
+export const DEFAULT_CLASS_DURATION_MINUTES = 60;
+export const DEFAULT_BOOKING_LEAD_TIME_HOURS = 2;
