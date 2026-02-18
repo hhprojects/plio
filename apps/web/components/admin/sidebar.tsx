@@ -16,6 +16,8 @@ import {
   Shield,
   Scissors,
   UserCheck,
+  LayoutDashboard,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -45,7 +47,9 @@ const wellnessNavItems = [
 ];
 
 const platformNavItems = [
+  { label: "Dashboard", href: "/admin/platform", icon: LayoutDashboard },
   { label: "Waitlist", href: "/admin/platform/waitlist", icon: Shield },
+  { label: "Tenants", href: "/admin/platform/tenants", icon: Building2 },
 ];
 
 const bottomNavItems = [
@@ -77,29 +81,8 @@ export function Sidebar({ userRole, businessType }: SidebarProps) {
       {/* Navigation */}
       <ScrollArea className="flex-1 px-3 py-4">
         <nav className="flex flex-col gap-1">
-          {navItems.map((item) => {
-            const isActive =
-              pathname === item.href || pathname.startsWith(item.href + "/");
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                )}
-              >
-                <item.icon className="size-5 shrink-0" />
-                {item.label}
-              </Link>
-            );
-          })}
-          {/* Platform section (super admin only) */}
-          {userRole === "super_admin" && (
-            <div className="mt-4">
-              <Separator className="bg-sidebar-border mb-3" />
+          {userRole === "super_admin" ? (
+            <>
               <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
                 Platform
               </p>
@@ -122,7 +105,27 @@ export function Sidebar({ userRole, businessType }: SidebarProps) {
                   </Link>
                 );
               })}
-            </div>
+            </>
+          ) : (
+            navItems.map((item) => {
+              const isActive =
+                pathname === item.href || pathname.startsWith(item.href + "/");
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  )}
+                >
+                  <item.icon className="size-5 shrink-0" />
+                  {item.label}
+                </Link>
+              );
+            })
           )}
         </nav>
       </ScrollArea>
@@ -130,28 +133,30 @@ export function Sidebar({ userRole, businessType }: SidebarProps) {
       {/* Bottom nav */}
       <div className="px-3 py-4">
         <Separator className="bg-sidebar-border mb-4" />
-        <nav className="flex flex-col gap-1">
-          {bottomNavItems.map((item) => {
-            const isActive =
-              pathname === item.href || pathname.startsWith(item.href + "/");
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                )}
-              >
-                <item.icon className="size-5 shrink-0" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="mt-2 flex gap-2 px-3 text-xs text-sidebar-foreground/40">
+        {userRole !== "super_admin" && (
+          <nav className="flex flex-col gap-1">
+            {bottomNavItems.map((item) => {
+              const isActive =
+                pathname === item.href || pathname.startsWith(item.href + "/");
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  )}
+                >
+                  <item.icon className="size-5 shrink-0" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        )}
+        <div className={cn("flex gap-2 px-3 text-xs text-sidebar-foreground/40", userRole !== "super_admin" && "mt-2")}>
           <a href="/privacy" className="hover:text-sidebar-foreground/60">Privacy</a>
           <span>·</span>
           <a href="/terms" className="hover:text-sidebar-foreground/60">Terms</a>
