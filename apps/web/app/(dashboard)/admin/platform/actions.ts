@@ -55,3 +55,61 @@ export async function getPlatformStats() {
     recentTenants,
   }
 }
+
+export async function getAllTenants() {
+  await requireSuperAdmin()
+  const admin = createAdminClient()
+
+  const { data, error } = await admin
+    .from('tenants')
+    .select('id, name, slug, business_type, subscription_tier, settings, created_at')
+    .order('created_at', { ascending: false })
+
+  if (error) return { data: null, error: error.message }
+  return { data }
+}
+
+export async function getTenantDetail(tenantId: string) {
+  await requireSuperAdmin()
+  const admin = createAdminClient()
+
+  const [tenant, userCount, studentCount] = await Promise.all([
+    admin
+      .from('tenants')
+      .select('*')
+      .eq('id', tenantId)
+      .single(),
+    admin
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId),
+    admin
+      .from('students')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId),
+  ])
+
+  if (tenant.error || !tenant.data) return { data: null, error: 'Tenant not found' }
+
+  return {
+    data: {
+      ...tenant.data,
+      userCount: userCount.count ?? 0,
+      studentCount: studentCount.count ?? 0,
+    },
+  }
+}
+
+export async function updateTenantSubscription(tenantId: string, tier: string) {
+  await requireSuperAdmin()
+  const admin = createAdminClient()
+
+  const { error } = await admin
+    .from('tenants')
+    .update({ subscription_tier: tier })
+    .eq('id', tenantId)
+
+  if (error) return { error: error.message }
+  revalidatePath('/admin/platform/tenants')
+  return { error: null }
+}
