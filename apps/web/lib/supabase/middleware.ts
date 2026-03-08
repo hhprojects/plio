@@ -36,98 +36,35 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Protected routes: redirect unauthenticated users to /login
-  if (
-    !user &&
-    (pathname.startsWith("/admin") ||
-      pathname.startsWith("/tutor") ||
-      pathname.startsWith("/parent") ||
-      pathname.startsWith("/practitioner"))
-  ) {
+  // Protected routes: dashboard pages and onboarding
+  const isDashboardRoute =
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/calendar") ||
+    pathname.startsWith("/clients") ||
+    pathname.startsWith("/services") ||
+    pathname.startsWith("/team") ||
+    pathname.startsWith("/rooms") ||
+    pathname.startsWith("/invoicing") ||
+    pathname.startsWith("/settings") ||
+    pathname.startsWith("/platform");
+  const isOnboardingRoute = pathname.startsWith("/onboarding");
+
+  if (!user && (isDashboardRoute || isOnboardingRoute)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  // Helper: get the user's home path based on role
-  function getHomePath(role: string | undefined) {
-    if (role === 'parent') return '/parent/dashboard';
-    if (role === 'tutor') return '/tutor/schedule';
-    if (role === 'practitioner') return '/practitioner/dashboard';
-    return '/admin';
-  }
-
-  // Role-based route enforcement: prevent cross-portal access
-  if (
-    user &&
-    (pathname.startsWith("/admin") ||
-      pathname.startsWith("/tutor") ||
-      pathname.startsWith("/parent") ||
-      pathname.startsWith("/practitioner"))
-  ) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('user_id', user.id)
-      .limit(1)
-      .single();
-
-    const role = profile?.role;
-    const home = getHomePath(role);
-    const url = request.nextUrl.clone();
-
-    // Tutor trying to access /admin/* or /parent/* or /practitioner/* → redirect to tutor portal
-    if (role === 'tutor' && (pathname.startsWith('/admin') || pathname.startsWith('/parent') || pathname.startsWith('/practitioner'))) {
-      url.pathname = home;
-      return NextResponse.redirect(url);
-    }
-    // Parent trying to access /admin/* or /tutor/* or /practitioner/* → redirect to parent portal
-    if (role === 'parent' && (pathname.startsWith('/admin') || pathname.startsWith('/tutor') || pathname.startsWith('/practitioner'))) {
-      url.pathname = home;
-      return NextResponse.redirect(url);
-    }
-    // Practitioner trying to access /admin/* or /tutor/* or /parent/* → redirect to practitioner portal
-    if (role === 'practitioner' && (pathname.startsWith('/admin') || pathname.startsWith('/tutor') || pathname.startsWith('/parent'))) {
-      url.pathname = home;
-      return NextResponse.redirect(url);
-    }
-    // Admin/super_admin trying to access /tutor/* or /parent/* or /practitioner/* → redirect to admin
-    if ((role === 'admin' || role === 'super_admin') && (pathname.startsWith('/tutor') || pathname.startsWith('/parent') || pathname.startsWith('/practitioner'))) {
-      url.pathname = home;
-      return NextResponse.redirect(url);
-    }
-  }
-
-  // Redirect authenticated users away from auth pages to their dashboard
+  // Redirect authenticated users away from auth pages and landing to dashboard
   if (
     user &&
     (pathname === "/login" ||
       pathname === "/signup" ||
-      pathname === "/forgot-password")
+      pathname === "/forgot-password" ||
+      pathname === "/")
   ) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('user_id', user.id)
-      .limit(1)
-      .single();
-
     const url = request.nextUrl.clone();
-    url.pathname = getHomePath(profile?.role);
-    return NextResponse.redirect(url);
-  }
-
-  // Redirect authenticated users from landing page to their dashboard
-  if (user && pathname === '/') {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('user_id', user.id)
-      .limit(1)
-      .single();
-
-    const url = request.nextUrl.clone();
-    url.pathname = getHomePath(profile?.role);
+    url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
 
