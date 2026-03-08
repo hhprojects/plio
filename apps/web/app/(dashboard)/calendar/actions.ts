@@ -238,3 +238,88 @@ export async function updateEnrollmentStatus(enrollmentId: string, status: strin
   revalidatePath('/calendar')
   return { success: true }
 }
+
+// --- Enrollment Management ---
+
+export async function addEnrollment(sessionId: string, contactId: string, dependentId?: string) {
+  const auth = await getTenantId()
+  if (!auth.tenantId) return { error: 'Not authenticated' }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('enrollments')
+    .insert({
+      tenant_id: auth.tenantId,
+      session_id: sessionId,
+      contact_id: contactId,
+      dependent_id: dependentId || null,
+      status: 'confirmed',
+    })
+
+  if (error) return { error: error.message }
+  revalidatePath('/calendar')
+  return { success: true }
+}
+
+export async function removeEnrollment(enrollmentId: string) {
+  const auth = await getTenantId()
+  if (!auth.tenantId) return { error: 'Not authenticated' }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('enrollments')
+    .delete()
+    .eq('id', enrollmentId)
+    .eq('tenant_id', auth.tenantId)
+
+  if (error) return { error: error.message }
+  revalidatePath('/calendar')
+  return { success: true }
+}
+
+export async function bulkCheckIn(sessionId: string) {
+  const auth = await getTenantId()
+  if (!auth.tenantId) return { error: 'Not authenticated' }
+
+  const supabase = await createClient()
+  const now = new Date().toISOString()
+  const { error } = await supabase
+    .from('enrollments')
+    .update({ status: 'attended', checked_in_at: now })
+    .eq('session_id', sessionId)
+    .eq('tenant_id', auth.tenantId)
+    .eq('status', 'confirmed')
+
+  if (error) return { error: error.message }
+  revalidatePath('/calendar')
+  return { success: true }
+}
+
+export async function fetchSessionEnrollments(sessionId: string) {
+  const auth = await getTenantId()
+  if (!auth.tenantId) return { enrollments: [], error: 'Not authenticated' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('enrollments')
+    .select('*, contact:contacts(id, name), dependent:contact_dependents(id, name)')
+    .eq('session_id', sessionId)
+    .eq('tenant_id', auth.tenantId)
+    .order('created_at')
+
+  return { enrollments: data ?? [], error: error?.message }
+}
+
+export async function fetchContactsWithDependents() {
+  const auth = await getTenantId()
+  if (!auth.tenantId) return { contacts: [] }
+
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('contacts')
+    .select('id, name, dependents:contact_dependents(id, name)')
+    .eq('tenant_id', auth.tenantId)
+    .order('name')
+
+  return { contacts: data ?? [] }
+}

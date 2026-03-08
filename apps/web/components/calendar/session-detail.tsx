@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import {
   X,
   Clock,
@@ -11,10 +11,10 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Users,
   Loader2,
 } from 'lucide-react'
-import { updateSessionStatus } from '@/app/(dashboard)/calendar/actions'
+import { updateSessionStatus, fetchSessionEnrollments, fetchContactsWithDependents } from '@/app/(dashboard)/calendar/actions'
+import { EnrollmentForm } from './enrollment-form'
 
 interface SessionData {
   id: string
@@ -64,6 +64,37 @@ const TYPE_CONFIG: Record<string, { label: string; className: string }> = {
 
 export function SessionDetail({ session, room, onClose }: SessionDetailProps) {
   const [isPending, startTransition] = useTransition()
+  const [enrollments, setEnrollments] = useState<Array<{
+    id: string
+    status: string
+    checked_in_at: string | null
+    contact: { id: string; name: string } | null
+    dependent: { id: string; name: string } | null
+  }>>([])
+  const [contacts, setContacts] = useState<Array<{
+    id: string
+    name: string
+    dependents?: { id: string; name: string }[]
+  }>>([])
+  const [loadingEnrollments, setLoadingEnrollments] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoadingEnrollments(true)
+
+    Promise.all([
+      fetchSessionEnrollments(session.id),
+      fetchContactsWithDependents(),
+    ]).then(([enrollResult, contactResult]) => {
+      if (cancelled) return
+      setEnrollments(enrollResult.enrollments as typeof enrollments)
+      setContacts(contactResult.contacts as typeof contacts)
+      setLoadingEnrollments(false)
+    })
+
+    return () => { cancelled = true }
+  }, [session.id])
+
   const statusConf = STATUS_CONFIG[session.status] ?? STATUS_CONFIG.scheduled
   const typeConf = TYPE_CONFIG[session.type] ?? TYPE_CONFIG.class
   const StatusIcon = statusConf.icon
@@ -85,7 +116,7 @@ export function SessionDetail({ session, room, onClose }: SessionDetailProps) {
   }
 
   return (
-    <div className="w-[400px] shrink-0 bg-white border border-gray-200 rounded-lg overflow-hidden">
+    <div className="w-[400px] shrink-0 bg-white border border-gray-200 rounded-lg overflow-hidden max-h-[calc(100vh-200px)] overflow-y-auto">
       {/* Header */}
       <div className="flex items-start justify-between p-4 border-b border-gray-100">
         <div className="flex items-center gap-3 min-w-0">
@@ -214,16 +245,19 @@ export function SessionDetail({ session, room, onClose }: SessionDetailProps) {
         </div>
       )}
 
-      {/* Enrollments placeholder */}
-      <div className="border-t border-gray-100 p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Users className="h-4 w-4 text-gray-400" />
-          <h4 className="text-sm font-semibold text-gray-900">Enrollments</h4>
+      {/* Enrollments */}
+      {loadingEnrollments ? (
+        <div className="border-t border-gray-100 p-4 flex items-center justify-center gap-2 text-xs text-gray-400">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          Loading enrollments...
         </div>
-        <p className="text-xs text-gray-400 italic">
-          Enrollment management will be available in a future update.
-        </p>
-      </div>
+      ) : (
+        <EnrollmentForm
+          sessionId={session.id}
+          enrollments={enrollments}
+          contacts={contacts}
+        />
+      )}
     </div>
   )
 }
