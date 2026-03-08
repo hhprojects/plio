@@ -15,7 +15,7 @@ export interface InvoiceRow {
 interface InvoiceTableProps {
   invoices: InvoiceRow[]
   onSelect: (invoice: InvoiceRow) => void
-  onDelete: (invoice: InvoiceRow) => void
+  onDelete?: (invoice: InvoiceRow) => void
 }
 
 const statusColors: Record<string, string> = {
@@ -93,7 +93,7 @@ export function InvoiceTable({ invoices, onSelect, onDelete }: InvoiceTableProps
                   >
                     <Eye className="h-4 w-4" />
                   </button>
-                  {invoice.status === 'draft' && (
+                  {onDelete && invoice.status === 'draft' && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation()

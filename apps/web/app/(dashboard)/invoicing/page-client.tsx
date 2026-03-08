@@ -116,7 +116,7 @@ export function InvoicingPageClient({ invoices, contacts, canWrite }: InvoicingP
         <InvoiceTable
           invoices={invoiceRows}
           onSelect={handleSelectInvoice}
-          onDelete={(inv) => setDeletingInvoice(inv)}
+          onDelete={canWrite ? (inv) => setDeletingInvoice(inv) : undefined}
         />
       </div>
 

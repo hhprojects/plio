@@ -34,19 +34,37 @@ export function DashboardPageClient({
   contactsCount,
   servicesCount,
   teamCount,
+  role,
 }: DashboardPageClientProps) {
-  const stats = [
-    { label: 'Contacts', value: contactsCount, icon: Users },
-    { label: 'Services', value: servicesCount, icon: Briefcase },
-    { label: 'Team Members', value: teamCount, icon: UserCog },
-  ]
+  const stats =
+    role === 'staff'
+      ? [
+          { label: 'My Clients', value: contactsCount, icon: Users },
+          { label: 'My Sessions Today', value: todaySessions.length, icon: Clock },
+          { label: 'My Services', value: servicesCount, icon: Briefcase },
+        ]
+      : role === 'client'
+        ? [
+            { label: 'My Sessions', value: servicesCount, icon: Clock },
+            { label: 'My Dependents', value: contactsCount, icon: Users },
+            { label: 'My Invoices', value: teamCount, icon: Briefcase },
+          ]
+        : [
+            { label: 'Contacts', value: contactsCount, icon: Users },
+            { label: 'Services', value: servicesCount, icon: Briefcase },
+            { label: 'Team Members', value: teamCount, icon: UserCog },
+          ]
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Welcome back. Here is an overview of your business today.
+          {role === 'client'
+            ? 'Welcome back. Here are your upcoming sessions.'
+            : role === 'staff'
+              ? 'Welcome back. Here is your schedule for today.'
+              : 'Welcome back. Here is an overview of your business today.'}
         </p>
       </div>
 

@@ -1,5 +1,5 @@
 import { requireModule } from '@/lib/auth/module-guard'
-import { getTenantId } from '@/lib/auth/cached'
+import { getTenantId, getAuthUser } from '@/lib/auth/cached'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { CalendarPageClient } from './page-client'
@@ -11,12 +11,12 @@ export default async function CalendarPage() {
 
   const supabase = await createClient()
 
-  // Fetch sessions for current month range (expanded ±1 month for calendar edges)
+  // Fetch sessions for current month range (expanded +/-1 month for calendar edges)
   const now = new Date()
   const startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0]
   const endDate = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().split('T')[0]
 
-  const { data: sessions } = await supabase
+  let sessionsQuery = supabase
     .from('sessions')
     .select('*, service:services(id, name, color), team_member:team_members(id, name, color)')
     .eq('tenant_id', auth.tenantId)
@@ -24,6 +24,69 @@ export default async function CalendarPage() {
     .lte('date', endDate)
     .order('date')
     .order('start_time')
+
+  // Role-based filtering
+  if (auth.role === 'staff') {
+    // Staff: only sessions assigned to their team member record
+    const { data: teamMember } = await supabase
+      .from('team_members')
+      .select('id')
+      .eq('tenant_id', auth.tenantId)
+      .eq('profile_id', auth.profileId!)
+      .single()
+
+    if (teamMember) {
+      sessionsQuery = sessionsQuery.eq('team_member_id', teamMember.id)
+    } else {
+      // No team member record found — show nothing
+      sessionsQuery = sessionsQuery.eq('team_member_id', '00000000-0000-0000-0000-000000000000')
+    }
+  }
+
+  let sessions: Awaited<ReturnType<typeof sessionsQuery>>['data'] = null
+
+  if (auth.role === 'client') {
+    // Client: only sessions they are enrolled in
+    const user = await getAuthUser()
+    const { data: contact } = await supabase
+      .from('contacts')
+      .select('id')
+      .eq('email', user?.email ?? '')
+      .eq('tenant_id', auth.tenantId)
+      .single()
+
+    if (contact) {
+      const { data: enrollments } = await supabase
+        .from('enrollments')
+        .select('session_id')
+        .eq('tenant_id', auth.tenantId)
+        .eq('contact_id', contact.id)
+        .neq('status', 'cancelled')
+
+      const enrolledIds = (enrollments ?? []).map((e) => e.session_id)
+
+      if (enrolledIds.length > 0) {
+        const { data } = await supabase
+          .from('sessions')
+          .select('*, service:services(id, name, color), team_member:team_members(id, name, color)')
+          .eq('tenant_id', auth.tenantId)
+          .gte('date', startDate)
+          .lte('date', endDate)
+          .in('id', enrolledIds)
+          .order('date')
+          .order('start_time')
+
+        sessions = data
+      } else {
+        sessions = []
+      }
+    } else {
+      sessions = []
+    }
+  } else {
+    const { data } = await sessionsQuery
+    sessions = data
+  }
 
   // Fetch services, team members, rooms, and contacts
   const [servicesResult, teamResult, roomsResult, contactsResult] = await Promise.all([

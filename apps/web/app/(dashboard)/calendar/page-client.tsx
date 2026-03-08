@@ -160,7 +160,7 @@ export function CalendarPageClient({
     return formatter.format(d)
   }, [currentDate, view])
 
-  const canWrite = ['super_admin', 'admin', 'staff'].includes(role)
+  const canWrite = ['super_admin', 'admin'].includes(role)
   const recurringEnabled = calendarConfig.recurring_enabled !== false
   const appointmentsEnabled = calendarConfig.appointments_enabled !== false
 
