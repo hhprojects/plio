@@ -4,7 +4,15 @@ import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { getPublicSlots } from '@/app/(public)/book/[slug]/actions'
+// TODO: reconnect when public booking page is rebuilt
+// import { getPublicSlots } from '@/app/(public)/book/[slug]/actions'
+type GetPublicSlotsResult = { data: TimeSlot[] }
+const getPublicSlots = async (
+  _tenantId: string,
+  _serviceId: string,
+  _practitionerId: string,
+  _date: string
+): Promise<GetPublicSlotsResult> => ({ data: [] })
 
 interface TimeSlot {
   start: string
