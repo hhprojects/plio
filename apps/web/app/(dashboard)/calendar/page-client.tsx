@@ -1,9 +1,10 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useCalendarStore } from '@/stores/calendar-store'
 import { CalendarView } from '@/components/calendar/calendar-view'
 import { SessionDetail } from '@/components/calendar/session-detail'
+import { RecurringClassForm } from '@/components/calendar/recurring-class-form'
 import {
   Calendar,
   ChevronLeft,
@@ -13,6 +14,7 @@ import {
   LayoutList,
   Palette,
   Filter,
+  Plus,
 } from 'lucide-react'
 
 interface SessionWithRelations {
@@ -59,8 +61,10 @@ export function CalendarPageClient({
   services,
   teamMembers,
   rooms,
+  calendarConfig,
   role,
 }: CalendarPageClientProps) {
+  const [showRecurringForm, setShowRecurringForm] = useState(false)
   const {
     view,
     currentDate,
@@ -146,6 +150,7 @@ export function CalendarPageClient({
   }, [currentDate, view])
 
   const canWrite = ['super_admin', 'admin', 'staff'].includes(role)
+  const recurringEnabled = calendarConfig.recurring_enabled !== false
 
   return (
     <div className="space-y-4">
@@ -160,6 +165,15 @@ export function CalendarPageClient({
             View and manage your schedule.
           </p>
         </div>
+        {canWrite && recurringEnabled && (
+          <button
+            onClick={() => setShowRecurringForm(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+          >
+            <Plus className="h-4 w-4" />
+            New Recurring Class
+          </button>
+        )}
       </div>
 
       {/* Toolbar */}
@@ -301,6 +315,15 @@ export function CalendarPageClient({
           />
         )}
       </div>
+
+      {/* Recurring class form dialog */}
+      <RecurringClassForm
+        open={showRecurringForm}
+        onClose={() => setShowRecurringForm(false)}
+        services={services}
+        teamMembers={teamMembers}
+        rooms={rooms}
+      />
     </div>
   )
 }
