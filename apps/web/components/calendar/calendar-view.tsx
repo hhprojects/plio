@@ -13,6 +13,7 @@ interface CalendarViewProps {
   currentDate: Date
   onDateChange: (date: Date) => void
   onEventClick: (sessionId: string) => void
+  onDateClick?: (date: Date) => void
   canWrite: boolean
 }
 
@@ -22,6 +23,7 @@ export function CalendarView({
   currentDate,
   onDateChange,
   onEventClick,
+  onDateClick,
   canWrite,
 }: CalendarViewProps) {
   const calendarRef = useRef<FullCalendar | null>(null)
@@ -48,9 +50,9 @@ export function CalendarView({
   }
 
   function handleDateClick(info: DateClickArg) {
-    // Future: open appointment creation for this date/time slot
-    // For now, navigate to day view on that date
-    if (view !== 'timeGridDay') {
+    if (onDateClick) {
+      onDateClick(info.date)
+    } else if (view !== 'timeGridDay') {
       onDateChange(info.date)
     }
   }

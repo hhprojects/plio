@@ -25,11 +25,12 @@ export default async function CalendarPage() {
     .order('date')
     .order('start_time')
 
-  // Fetch services and team members for filters
-  const [servicesResult, teamResult, roomsResult] = await Promise.all([
-    supabase.from('services').select('id, name, color').eq('tenant_id', auth.tenantId).eq('active', true),
+  // Fetch services, team members, rooms, and contacts
+  const [servicesResult, teamResult, roomsResult, contactsResult] = await Promise.all([
+    supabase.from('services').select('id, name, color, duration_minutes').eq('tenant_id', auth.tenantId).eq('active', true),
     supabase.from('team_members').select('id, name, color').eq('tenant_id', auth.tenantId),
     supabase.from('rooms').select('id, name').eq('tenant_id', auth.tenantId).eq('is_active', true),
+    supabase.from('contacts').select('id, name').eq('tenant_id', auth.tenantId),
   ])
 
   const calendarConfig = (mod.config as Record<string, unknown>) ?? {}
@@ -40,6 +41,7 @@ export default async function CalendarPage() {
       services={servicesResult.data ?? []}
       teamMembers={teamResult.data ?? []}
       rooms={roomsResult.data ?? []}
+      contacts={contactsResult.data ?? []}
       calendarConfig={calendarConfig}
       role={auth.role!}
     />

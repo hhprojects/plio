@@ -1,5 +1,6 @@
 'use client'
 
+import { useTransition } from 'react'
 import {
   X,
   Clock,
@@ -11,7 +12,9 @@ import {
   XCircle,
   AlertCircle,
   Users,
+  Loader2,
 } from 'lucide-react'
+import { updateSessionStatus } from '@/app/(dashboard)/calendar/actions'
 
 interface SessionData {
   id: string
@@ -60,6 +63,7 @@ const TYPE_CONFIG: Record<string, { label: string; className: string }> = {
 }
 
 export function SessionDetail({ session, room, onClose }: SessionDetailProps) {
+  const [isPending, startTransition] = useTransition()
   const statusConf = STATUS_CONFIG[session.status] ?? STATUS_CONFIG.scheduled
   const typeConf = TYPE_CONFIG[session.type] ?? TYPE_CONFIG.class
   const StatusIcon = statusConf.icon
@@ -171,6 +175,44 @@ export function SessionDetail({ session, room, onClose }: SessionDetailProps) {
           </p>
         </div>
       </div>
+
+      {/* Status actions */}
+      {session.status === 'scheduled' && (
+        <div className="border-t border-gray-100 p-4 flex gap-2">
+          <button
+            onClick={() => {
+              startTransition(async () => {
+                await updateSessionStatus(session.id, 'completed')
+              })
+            }}
+            disabled={isPending}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 disabled:opacity-50"
+          >
+            {isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <CheckCircle2 className="h-3.5 w-3.5" />
+            )}
+            Mark Completed
+          </button>
+          <button
+            onClick={() => {
+              startTransition(async () => {
+                await updateSessionStatus(session.id, 'cancelled')
+              })
+            }}
+            disabled={isPending}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 disabled:opacity-50"
+          >
+            {isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <XCircle className="h-3.5 w-3.5" />
+            )}
+            Cancel Session
+          </button>
+        </div>
+      )}
 
       {/* Enrollments placeholder */}
       <div className="border-t border-gray-100 p-4">

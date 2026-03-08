@@ -5,6 +5,7 @@ import { useCalendarStore } from '@/stores/calendar-store'
 import { CalendarView } from '@/components/calendar/calendar-view'
 import { SessionDetail } from '@/components/calendar/session-detail'
 import { RecurringClassForm } from '@/components/calendar/recurring-class-form'
+import { AppointmentForm } from '@/components/calendar/appointment-form'
 import {
   Calendar,
   ChevronLeft,
@@ -41,11 +42,17 @@ interface FilterOption {
   color?: string | null
 }
 
+interface ContactOption {
+  id: string
+  name: string
+}
+
 interface CalendarPageClientProps {
   sessions: SessionWithRelations[]
   services: FilterOption[]
   teamMembers: FilterOption[]
   rooms: { id: string; name: string }[]
+  contacts: ContactOption[]
   calendarConfig: Record<string, unknown>
   role: string
 }
@@ -61,10 +68,14 @@ export function CalendarPageClient({
   services,
   teamMembers,
   rooms,
+  contacts,
   calendarConfig,
   role,
 }: CalendarPageClientProps) {
   const [showRecurringForm, setShowRecurringForm] = useState(false)
+  const [showAppointmentForm, setShowAppointmentForm] = useState(false)
+  const [selectedDate, setSelectedDate] = useState<string | undefined>()
+  const [selectedTime, setSelectedTime] = useState<string | undefined>()
   const {
     view,
     currentDate,
@@ -151,6 +162,19 @@ export function CalendarPageClient({
 
   const canWrite = ['super_admin', 'admin', 'staff'].includes(role)
   const recurringEnabled = calendarConfig.recurring_enabled !== false
+  const appointmentsEnabled = calendarConfig.appointments_enabled !== false
+
+  function handleDateClick(date: Date) {
+    if (canWrite && appointmentsEnabled) {
+      const dateStr = date.toISOString().split('T')[0]
+      const hours = date.getHours().toString().padStart(2, '0')
+      const minutes = date.getMinutes().toString().padStart(2, '0')
+      const timeStr = hours !== '00' || minutes !== '00' ? `${hours}:${minutes}` : undefined
+      setSelectedDate(dateStr)
+      setSelectedTime(timeStr)
+      setShowAppointmentForm(true)
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -165,15 +189,30 @@ export function CalendarPageClient({
             View and manage your schedule.
           </p>
         </div>
-        {canWrite && recurringEnabled && (
-          <button
-            onClick={() => setShowRecurringForm(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
-          >
-            <Plus className="h-4 w-4" />
-            New Recurring Class
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {canWrite && appointmentsEnabled && (
+            <button
+              onClick={() => {
+                setSelectedDate(undefined)
+                setSelectedTime(undefined)
+                setShowAppointmentForm(true)
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+            >
+              <Plus className="h-4 w-4" />
+              New Appointment
+            </button>
+          )}
+          {canWrite && recurringEnabled && (
+            <button
+              onClick={() => setShowRecurringForm(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-600 bg-white border border-indigo-300 rounded-md hover:bg-indigo-50"
+            >
+              <Plus className="h-4 w-4" />
+              New Recurring Class
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Toolbar */}
@@ -304,6 +343,7 @@ export function CalendarPageClient({
             currentDate={currentDate}
             onDateChange={setCurrentDate}
             onEventClick={(id) => selectSession(id)}
+            onDateClick={handleDateClick}
             canWrite={canWrite}
           />
         </div>
@@ -324,6 +364,18 @@ export function CalendarPageClient({
         teamMembers={teamMembers}
         rooms={rooms}
       />
+
+      {/* Appointment form dialog */}
+      {showAppointmentForm && (
+        <AppointmentForm
+          services={services}
+          teamMembers={teamMembers}
+          contacts={contacts}
+          initialDate={selectedDate}
+          initialTime={selectedTime}
+          onClose={() => setShowAppointmentForm(false)}
+        />
+      )}
     </div>
   )
 }
