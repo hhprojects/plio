@@ -2,8 +2,6 @@
 -- Drops old business-type-specific tables and introduces a unified,
 -- module-driven schema that works for any vertical.
 
-BEGIN;
-
 -- =============================================================================
 -- 1. Drop old tables (IF EXISTS, CASCADE)
 -- =============================================================================
@@ -15,6 +13,7 @@ DROP TABLE IF EXISTS courses CASCADE;
 DROP TABLE IF EXISTS students CASCADE;
 DROP TABLE IF EXISTS client_notes CASCADE;
 DROP TABLE IF EXISTS appointments CASCADE;
+DROP TABLE IF EXISTS availability_overrides CASCADE;
 DROP TABLE IF EXISTS practitioner_availability CASCADE;
 DROP TABLE IF EXISTS practitioners CASCADE;
 DROP TABLE IF EXISTS clients CASCADE;
@@ -240,4 +239,4 @@ CREATE INDEX idx_enrollments_session      ON enrollments(session_id);
 CREATE INDEX idx_enrollments_contact      ON enrollments(contact_id);
 CREATE INDEX idx_contact_notes_contact    ON contact_notes(contact_id);
 
-COMMIT;
+-- end of migration

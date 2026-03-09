@@ -47,11 +47,10 @@ supabase/          → Migrations (SQL) and config
 
 **Route groups** in `app/`:
 - `(public)/` — Unauthenticated pages (booking, privacy, terms)
-- `(auth)/` — Login, register, invite acceptance
-- `(dashboard)/` — Protected (redirects to `/login` if no session)
-  - `admin/` — Admin dashboard with sidebar layout
-  - `parent/` — Parent portal
-  - `tutor/` — Tutor/practitioner portal
+- `(dashboard)/` — Protected, single layout for all roles (redirects to `/login` if no session)
+  - `dashboard/`, `calendar/`, `clients/`, `services/`, `team/`, `rooms/`, `invoicing/`, `settings/` — Module pages
+  - `platform/` — Super admin only (waitlist, tenants)
+- `onboarding/` — Multi-step wizard for new tenants
 
 ### Page Pattern
 
@@ -67,6 +66,8 @@ getTenantId() → Zod validation → Supabase query (RLS-scoped) → revalidateP
 
 `getTenantId()` is in `lib/auth/cached.ts` — uses React `cache()` so it only runs once per request. Returns `{ tenantId, profileId, role }`.
 
+`getTenantModules()` is in `lib/auth/cached.ts` — fetches enabled modules for the tenant. `requireModule(slug)` in `lib/auth/module-guard.ts` — returns `notFound()` if module not enabled.
+
 ### Supabase Clients
 
 - `lib/supabase/server.ts` — `createClient()`: SSR client with cookie auth. Used in Server Components and Actions for authenticated users.
@@ -75,11 +76,16 @@ getTenantId() → Zod validation → Supabase query (RLS-scoped) → revalidateP
 
 ### Multi-Tenancy
 
-Every table has `tenant_id`. RLS policies in `supabase/migrations/00013_rls_policies.sql` enforce tenant isolation via `get_user_tenant_ids()` and `get_user_role(tenant_id)` helper functions. Wellness-specific tables have additional policies in `00022_wellness_rls_policies.sql` including `anon` access for public booking.
+Every table has `tenant_id`. RLS policies in `supabase/migrations/00013_rls_policies.sql` enforce tenant isolation via `get_user_tenant_ids()` and `get_user_role(tenant_id)` helper functions. Module system: `modules` table (9 system modules, seeded) + `tenant_modules` table (per-tenant config with enabled, custom_title, sort_order). Additional modular policies in `00026_modular_rls_policies.sql` including `anon` access for public booking.
 
 ### State Management
 
-Zustand stores in `stores/`: `calendar-store.ts`, `tenant-store.ts`, `notification-store.ts`. Used in "use client" components only.
+Zustand stores in `stores/`. Used in "use client" components only.
+
+- `module-store.ts` — `useModuleStore` with `isModuleEnabled`, `getModuleTitle`
+- `tenant-store.ts` — simplified TenantSettings (logo_url, accent_color, business_name)
+- `calendar-store.ts` — view, colorBy, filters
+- `notification-store.ts` — unchanged
 
 ## Conventions
 
@@ -89,5 +95,6 @@ Zustand stores in `stores/`: `calendar-store.ts`, `tenant-store.ts`, `notificati
 - **Calendar:** FullCalendar v6 (`@fullcalendar/react`).
 - **Toasts:** Sonner (`sonner`).
 - **Design tokens:** Primary = Indigo `#6366f1`, Sidebar = Slate 900 `#0f172a`.
-- **Business types:** `education` (students, courses, tutors) and `wellness` (clients, services, practitioners). Schema supports both via `business_type` on tenants.
+- **Module system:** 9 modules (dashboard, calendar, clients, services, team, rooms, invoicing, booking, settings). 3 always-on (dashboard, team, settings).
+- **Roles:** `super_admin`, `admin`, `staff`, `client`.
 - **Timezone:** Singapore (`Asia/Singapore`) throughout. Date helpers in `@plio/utils` use `Intl.DateTimeFormat`.
