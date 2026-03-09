@@ -13,6 +13,8 @@ import {
   Globe,
   Settings,
   Shield,
+  Building2,
+  ClipboardList,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { TenantModuleWithModule, TenantSettings } from '@plio/db'
@@ -46,6 +48,13 @@ const SLUG_TO_ICON: Record<string, LucideIcon> = {
 const STAFF_MODULES = ['dashboard', 'calendar', 'clients', 'team']
 const CLIENT_MODULES = ['dashboard', 'calendar', 'invoicing']
 
+const PLATFORM_NAV = [
+  { slug: 'dashboard', title: 'Dashboard', route: '/dashboard', icon: LayoutDashboard },
+  { slug: 'tenants', title: 'Tenants', route: '/platform/tenants', icon: Building2 },
+  { slug: 'waitlist', title: 'Waitlist', route: '/platform/waitlist', icon: ClipboardList },
+  { slug: 'settings', title: 'Settings', route: '/platform/settings', icon: Settings },
+]
+
 interface SidebarProps {
   modules: TenantModuleWithModule[]
   role: string
@@ -56,23 +65,27 @@ interface SidebarProps {
 export function Sidebar({ modules, role, tenantName, tenantSettings }: SidebarProps) {
   const pathname = usePathname()
 
-  // Filter modules by role
+  // Filter modules by role (not used for super_admin)
   const visibleModules = modules.filter((m) => {
     if (!m.enabled) return false
     const slug = m.module.slug
-    if (role === 'admin' || role === 'super_admin') return true
+    if (role === 'admin') return true
     if (role === 'staff') return STAFF_MODULES.includes(slug)
     if (role === 'client') return CLIENT_MODULES.includes(slug)
     return false
   })
 
-  const displayName = tenantSettings.business_name || tenantName
+  const displayName = role === 'super_admin' ? 'Plio Platform' : (tenantSettings.business_name || tenantName)
 
   return (
     <aside className="flex w-64 flex-col bg-slate-900 text-white">
       {/* Logo / Business Name */}
       <div className="flex h-16 items-center gap-3 border-b border-slate-700 px-5">
-        {tenantSettings.logo_url ? (
+        {role === 'super_admin' ? (
+          <div className="flex h-8 w-8 items-center justify-center rounded bg-indigo-500 text-sm font-bold">
+            <Shield className="h-4 w-4" />
+          </div>
+        ) : tenantSettings.logo_url ? (
           <img
             src={tenantSettings.logo_url}
             alt={displayName}
@@ -88,48 +101,50 @@ export function Sidebar({ modules, role, tenantName, tenantSettings }: SidebarPr
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {visibleModules.map((m) => {
-          const slug = m.module.slug
-          const route = SLUG_TO_ROUTE[slug] ?? `/${slug}`
-          const Icon = SLUG_TO_ICON[slug] ?? LayoutDashboard
-          const title = m.custom_title ?? m.module.default_title
-          const isActive = pathname === route || pathname.startsWith(route + '/')
+        {role === 'super_admin'
+          ? PLATFORM_NAV.map((item) => {
+              const isActive = pathname === item.route || pathname.startsWith(item.route + '/')
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.slug}
+                  href={item.route}
+                  className={cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  )}
+                >
+                  <Icon className="h-5 w-5 shrink-0" />
+                  <span className="truncate">{item.title}</span>
+                </Link>
+              )
+            })
+          : visibleModules.map((m) => {
+              const slug = m.module.slug
+              const route = SLUG_TO_ROUTE[slug] ?? `/${slug}`
+              const Icon = SLUG_TO_ICON[slug] ?? LayoutDashboard
+              const title = m.custom_title ?? m.module.default_title
+              const isActive = pathname === route || pathname.startsWith(route + '/')
 
-          return (
-            <Link
-              key={m.id}
-              href={route}
-              className={cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-slate-800 text-white'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              )}
-            >
-              <Icon className="h-5 w-5 shrink-0" />
-              <span className="truncate">{title}</span>
-            </Link>
-          )
-        })}
+              return (
+                <Link
+                  key={m.id}
+                  href={route}
+                  className={cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  )}
+                >
+                  <Icon className="h-5 w-5 shrink-0" />
+                  <span className="truncate">{title}</span>
+                </Link>
+              )
+            })}
       </nav>
-
-      {/* Bottom section — Platform link for super_admin */}
-      {role === 'super_admin' && (
-        <div className="border-t border-slate-700 px-3 py-3">
-          <Link
-            href="/admin/platform"
-            className={cn(
-              'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-              pathname.startsWith('/admin/platform')
-                ? 'bg-slate-800 text-white'
-                : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-            )}
-          >
-            <Shield className="h-5 w-5 shrink-0" />
-            <span>Platform</span>
-          </Link>
-        </div>
-      )}
     </aside>
   )
 }

@@ -56,7 +56,7 @@ export async function approveWaitlist(id: string) {
     .eq('id', id)
 
   revalidatePath('/platform/waitlist')
-  revalidatePath('/platform')
+  revalidatePath('/dashboard')
   return { success: true, tenantId: tenant.id }
 }
 
@@ -89,6 +89,6 @@ export async function rejectWaitlist(id: string) {
     .eq('id', id)
 
   revalidatePath('/platform/waitlist')
-  revalidatePath('/platform')
+  revalidatePath('/dashboard')
   return { success: true }
 }

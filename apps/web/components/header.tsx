@@ -13,7 +13,9 @@ const ROUTE_TITLES: Record<string, string> = {
   '/invoicing': 'Invoicing',
   '/booking': 'Booking',
   '/settings': 'Settings',
-  '/admin/platform': 'Platform',
+  '/platform/tenants': 'Tenants',
+  '/platform/waitlist': 'Waitlist',
+  '/platform/settings': 'Platform Settings',
 }
 
 interface HeaderProps {
