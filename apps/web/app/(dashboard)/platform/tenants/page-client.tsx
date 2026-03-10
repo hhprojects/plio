@@ -191,18 +191,20 @@ export function TenantsPageClient({ tenants }: Props) {
                 </Select>
               </div>
 
-              {/* Active toggle */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Active</p>
-                  <p className="text-xs text-gray-500">Disabled tenants cannot access the platform</p>
+              {/* Active toggle — hidden for platform tenant (has super_admin users) */}
+              {!users.some((u) => u.role === 'super_admin') && (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Active</p>
+                    <p className="text-xs text-gray-500">Disabled tenants cannot access the platform</p>
+                  </div>
+                  <Switch
+                    checked={selected.active}
+                    onCheckedChange={handleToggleActive}
+                    disabled={isPending}
+                  />
                 </div>
-                <Switch
-                  checked={selected.active}
-                  onCheckedChange={handleToggleActive}
-                  disabled={isPending}
-                />
-              </div>
+              )}
 
               <Separator />
 
