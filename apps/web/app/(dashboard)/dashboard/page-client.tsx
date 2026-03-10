@@ -2,6 +2,7 @@
 
 import { Users, Briefcase, UserCog, Clock, Building2, UserPlus, ClipboardList } from 'lucide-react'
 import Link from 'next/link'
+import { cn } from '@/lib/utils'
 
 interface Session {
   id: string
@@ -41,10 +42,10 @@ function formatTime(time: string): string {
 export function DashboardPageClient(props: DashboardPageClientProps) {
   if (props.role === 'super_admin') {
     const platformStats = [
-      { label: 'Total Tenants', value: props.totalTenants, icon: Building2 },
+      { label: 'Total Tenants', value: props.totalTenants, icon: Building2, href: '/platform/tenants' },
       { label: 'Total Users', value: props.totalUsers, icon: Users },
       { label: 'New Signups (7d)', value: props.recentSignups, icon: UserPlus },
-      { label: 'Pending Waitlist', value: props.pendingWaitlist, icon: ClipboardList },
+      { label: 'Pending Waitlist', value: props.pendingWaitlist, icon: ClipboardList, href: '/platform/waitlist' },
     ]
 
     return (
@@ -59,10 +60,12 @@ export function DashboardPageClient(props: DashboardPageClientProps) {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {platformStats.map((stat) => {
             const Icon = stat.icon
-            return (
+            const card = (
               <div
-                key={stat.label}
-                className="bg-white rounded-lg border p-6 shadow-sm"
+                className={cn(
+                  'bg-white rounded-lg border p-6 shadow-sm',
+                  stat.href && 'hover:border-indigo-200 hover:shadow-md transition-all cursor-pointer'
+                )}
               >
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-gray-500">{stat.label}</p>
@@ -72,6 +75,11 @@ export function DashboardPageClient(props: DashboardPageClientProps) {
                 </div>
                 <p className="mt-2 text-3xl font-bold">{stat.value}</p>
               </div>
+            )
+            return stat.href ? (
+              <Link key={stat.label} href={stat.href}>{card}</Link>
+            ) : (
+              <div key={stat.label}>{card}</div>
             )
           })}
         </div>

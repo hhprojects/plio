@@ -80,6 +80,7 @@ export interface Tenant {
   slug: string;
   settings: TenantSettings | null;
   subscription_tier: SubscriptionTier;
+  active: boolean;
   created_at: string;
 }
 
