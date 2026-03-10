@@ -9,13 +9,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { modules } = await getTenantModules()
 
-  // Fetch tenant for branding
+  // Fetch tenant for branding + active status
   const supabase = await createClient()
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, settings')
+    .select('name, settings, active')
     .eq('id', auth.tenantId)
     .single()
+
+  // Block disabled tenants (super_admin bypasses this)
+  if (tenant && !tenant.active && auth.role !== 'super_admin') {
+    redirect('/login?error=tenant_disabled')
+  }
 
   return (
     <DashboardShell
