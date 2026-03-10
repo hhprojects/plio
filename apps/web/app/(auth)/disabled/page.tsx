@@ -17,7 +17,7 @@ export default function TenantDisabledPage() {
   async function handleLogout() {
     const supabase = createBrowserClient()
     await supabase.auth.signOut()
-    router.push('/login')
+    router.push('/register')
   }
 
   return (
