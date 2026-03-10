@@ -1,6 +1,6 @@
 'use client'
 
-import { createBrowserClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Lock, Mail } from 'lucide-react'
 import {
@@ -15,9 +15,9 @@ export default function TenantDisabledPage() {
   const router = useRouter()
 
   async function handleLogout() {
-    const supabase = createBrowserClient()
+    const supabase = createClient()
     await supabase.auth.signOut()
-    router.push('/register')
+    router.push('/login')
   }
 
   return (
