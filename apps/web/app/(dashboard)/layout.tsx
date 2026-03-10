@@ -19,7 +19,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   // Block disabled tenants (super_admin bypasses this)
   if (tenant && !tenant.active && auth.role !== 'super_admin') {
-    redirect('/login?error=tenant_disabled')
+    redirect('/disabled')
   }
 
   return (
