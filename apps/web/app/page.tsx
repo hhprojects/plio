@@ -59,6 +59,7 @@ export default function LandingPage() {
   const { ref: featuresRef, inView: featuresInView } = useInView({ threshold: 0.1 })
   const { ref: stepsRef, inView: stepsInView } = useInView({ threshold: 0.1 })
   const { ref: templatesRef, inView: templatesInView } = useInView({ threshold: 0.1 })
+  const { ref: ctaRef, inView: ctaInView } = useInView({ threshold: 0.2 })
 
   return (
     <>
@@ -373,6 +374,65 @@ export default function LandingPage() {
           </p>
         </div>
       </section>
+
+      {/* ── CTA Banner ── */}
+      <section className="relative bg-indigo-600 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.15),transparent_70%)] pointer-events-none" />
+        <div ref={ctaRef} className="relative mx-auto max-w-3xl px-6 py-20 sm:py-24 text-center">
+          <h2
+            className="font-display text-3xl sm:text-4xl text-white tracking-tight"
+            style={{
+              opacity: ctaInView ? 1 : 0,
+              transform: ctaInView ? 'translateY(0)' : 'translateY(20px)',
+              transition: 'opacity 0.6s ease-out, transform 0.6s ease-out',
+            }}
+          >
+            Ready to digitize your business?
+          </h2>
+          <p
+            className="mt-4 text-base text-indigo-100"
+            style={{
+              opacity: ctaInView ? 1 : 0,
+              transform: ctaInView ? 'translateY(0)' : 'translateY(20px)',
+              transition: 'opacity 0.6s ease-out 0.08s, transform 0.6s ease-out 0.08s',
+            }}
+          >
+            Join businesses across Singapore already using Plio.
+          </p>
+          <div
+            className="mt-8"
+            style={{
+              opacity: ctaInView ? 1 : 0,
+              transform: ctaInView ? 'translateY(0)' : 'translateY(20px)',
+              transition: 'opacity 0.6s ease-out 0.16s, transform 0.6s ease-out 0.16s',
+            }}
+          >
+            <Button className="bg-white text-indigo-600 hover:bg-indigo-50 rounded-full px-8" size="lg" asChild>
+              <Link href="/register">
+                Get Started — It&apos;s Free <ArrowRight className="ml-2 size-4" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Footer ── */}
+      <footer className="bg-slate-50 border-t border-slate-200">
+        <div className="mx-auto max-w-6xl px-6 py-8 flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4 text-center sm:text-left">
+          <div>
+            <span className="font-display text-lg text-slate-900">Plio</span>
+            <p className="text-sm text-slate-400">&copy; 2026</p>
+          </div>
+          <div className="flex flex-col items-center sm:items-end gap-1.5">
+            <div className="flex items-center gap-1 text-sm">
+              <Link href="/privacy" className="text-slate-500 hover:text-slate-900 transition-colors">Privacy</Link>
+              <span className="text-slate-300">&middot;</span>
+              <Link href="/terms" className="text-slate-500 hover:text-slate-900 transition-colors">Terms</Link>
+            </div>
+            <p className="text-sm text-slate-400">Built in Singapore</p>
+          </div>
+        </div>
+      </footer>
     </>
   )
 }
