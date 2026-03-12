@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Menu, X, ArrowRight, CalendarDays, Users, Receipt, Globe, UserCog, Puzzle } from 'lucide-react'
+import { Menu, X, ArrowRight, CalendarDays, Users, Receipt, Globe, UserCog, Puzzle, GraduationCap, Music, Activity, Heart, Settings2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useInView } from '@/hooks/use-in-view'
 
@@ -58,6 +58,7 @@ export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { ref: featuresRef, inView: featuresInView } = useInView({ threshold: 0.1 })
   const { ref: stepsRef, inView: stepsInView } = useInView({ threshold: 0.1 })
+  const { ref: templatesRef, inView: templatesInView } = useInView({ threshold: 0.1 })
 
   return (
     <>
@@ -309,6 +310,67 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── Templates Section ── */}
+      <section id="templates" className="bg-white py-24 sm:py-32">
+        <div ref={templatesRef} className="mx-auto max-w-6xl px-6">
+          {/* Section header */}
+          <h2
+            className="font-display text-3xl sm:text-4xl text-slate-900 tracking-tight text-center"
+            style={{
+              opacity: templatesInView ? 1 : 0,
+              transform: templatesInView ? 'translateY(0)' : 'translateY(20px)',
+              transition: 'opacity 0.6s ease-out, transform 0.6s ease-out',
+            }}
+          >
+            Start from a template, make it yours.
+          </h2>
+
+          {/* Template cards */}
+          <div
+            className="mt-14 flex gap-4 overflow-x-auto pb-4 sm:pb-0 snap-x snap-mandatory sm:snap-none sm:overflow-visible sm:justify-center"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {[
+              { icon: GraduationCap, name: 'Tuition Centre', modules: 'Students \u00b7 Courses \u00b7 Tutors' },
+              { icon: Music, name: 'Music School', modules: 'Students \u00b7 Lessons \u00b7 Studios' },
+              { icon: Activity, name: 'Yoga Studio', modules: 'Members \u00b7 Classes \u00b7 Booking' },
+              { icon: Heart, name: 'Wellness Centre', modules: 'Clients \u00b7 Treatments \u00b7 Rooms' },
+              { icon: Settings2, name: 'General', modules: 'All default module names' },
+            ].map((template, i) => {
+              const Icon = template.icon
+              return (
+                <div
+                  key={template.name}
+                  className="min-w-[220px] flex-shrink-0 snap-start bg-white rounded-xl border border-slate-200 p-6 hover:scale-[1.03] hover:shadow-md transition-all duration-200 cursor-default"
+                  style={{
+                    opacity: templatesInView ? 1 : 0,
+                    transform: templatesInView ? 'translateY(0)' : 'translateY(20px)',
+                    transition: `opacity 0.5s ease-out ${i * 80}ms, transform 0.5s ease-out ${i * 80}ms`,
+                  }}
+                >
+                  <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                    <Icon className="size-5" />
+                  </div>
+                  <h3 className="font-semibold text-slate-900 mt-3">{template.name}</h3>
+                  <p className="text-sm text-slate-500 mt-1">{template.modules}</p>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Below cards text */}
+          <p
+            className="text-sm text-slate-400 mt-6 text-center"
+            style={{
+              opacity: templatesInView ? 1 : 0,
+              transition: 'opacity 0.6s ease-out 0.4s',
+            }}
+          >
+            Or build your own from scratch
+          </p>
         </div>
       </section>
     </>
