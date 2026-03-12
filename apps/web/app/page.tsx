@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Menu, X, ArrowRight } from 'lucide-react'
+import { Menu, X, ArrowRight, CalendarDays, Users, Receipt, Globe, UserCog, Puzzle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useInView } from '@/hooks/use-in-view'
 
 const navLinks = [
   { label: 'Features', href: '#features' },
@@ -19,8 +20,43 @@ const verticals = [
   'And more',
 ]
 
+const features = [
+  {
+    icon: CalendarDays,
+    title: 'Calendar',
+    description: 'Recurring classes and one-off appointments with drag-and-drop rescheduling.',
+  },
+  {
+    icon: Users,
+    title: 'Clients',
+    description: 'Contact records, dependents, notes, and tags — all in one place.',
+  },
+  {
+    icon: Receipt,
+    title: 'Invoicing',
+    description: 'Generate invoices, track payments, and calculate GST automatically.',
+  },
+  {
+    icon: Globe,
+    title: 'Online Booking',
+    description: 'Share your public booking page — clients pick a slot, you get notified.',
+  },
+  {
+    icon: UserCog,
+    title: 'Team',
+    description: 'Staff profiles, weekly availability, overrides, and schedule management.',
+  },
+  {
+    icon: Puzzle,
+    title: 'Modular System',
+    description: 'Enable only what you need. Rename modules to match your vocabulary.',
+    accent: true,
+  },
+]
+
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { ref: featuresRef, inView: featuresInView } = useInView({ threshold: 0.1 })
 
   return (
     <>
@@ -166,6 +202,61 @@ export default function LandingPage() {
               </span>
             ))}
           </p>
+        </div>
+      </section>
+
+      {/* ── Features Section ── */}
+      <section id="features" className="bg-slate-50 py-24 sm:py-32">
+        <div ref={featuresRef} className="mx-auto max-w-6xl px-6">
+          {/* Section header */}
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <h2
+              className="font-display text-3xl sm:text-4xl text-slate-900 tracking-tight"
+              style={{
+                opacity: featuresInView ? 1 : 0,
+                transform: featuresInView ? 'translateY(0)' : 'translateY(20px)',
+                transition: 'opacity 0.6s ease-out, transform 0.6s ease-out',
+              }}
+            >
+              Everything you need to run your business.
+            </h2>
+            <p
+              className="mt-4 text-base sm:text-lg text-slate-500 leading-relaxed"
+              style={{
+                opacity: featuresInView ? 1 : 0,
+                transform: featuresInView ? 'translateY(0)' : 'translateY(20px)',
+                transition: 'opacity 0.6s ease-out 0.08s, transform 0.6s ease-out 0.08s',
+              }}
+            >
+              Plio gives you the tools to manage your entire operation from one dashboard.
+            </p>
+          </div>
+
+          {/* Feature cards grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {features.map((feature, i) => {
+              const Icon = feature.icon
+              return (
+                <div
+                  key={feature.title}
+                  className={`bg-white rounded-xl border border-slate-200 shadow-sm p-6 transition-shadow hover:shadow-md ${
+                    feature.accent ? 'border-l-4 border-l-indigo-500' : ''
+                  }`}
+                  style={{
+                    opacity: featuresInView ? 1 : 0,
+                    transform: featuresInView ? 'translateY(0)' : 'translateY(20px)',
+                    transition: `opacity 0.5s ease-out ${i * 80}ms, transform 0.5s ease-out ${i * 80}ms`,
+                  }}
+                >
+                  <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                    <Icon className="size-5" />
+                  </div>
+                  <h3 className="mt-4 text-lg font-semibold text-slate-900">{feature.title}</h3>
+                  <p className="mt-2 text-sm text-slate-500 leading-relaxed">{feature.description}</p>
+                </div>
+              )
+            })}
+          </div>
         </div>
       </section>
     </>
