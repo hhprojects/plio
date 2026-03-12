@@ -57,6 +57,7 @@ const features = [
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { ref: featuresRef, inView: featuresInView } = useInView({ threshold: 0.1 })
+  const { ref: stepsRef, inView: stepsInView } = useInView({ threshold: 0.1 })
 
   return (
     <>
@@ -256,6 +257,57 @@ export default function LandingPage() {
                 </div>
               )
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── How It Works Section ── */}
+      <section id="how-it-works" className="bg-slate-900 text-white py-24 sm:py-32">
+        <div ref={stepsRef} className="mx-auto max-w-6xl px-6">
+          {/* Section header */}
+          <h2
+            className="font-display text-3xl sm:text-4xl text-center tracking-tight"
+            style={{
+              opacity: stepsInView ? 1 : 0,
+              transform: stepsInView ? 'translateY(0)' : 'translateY(20px)',
+              transition: 'opacity 0.6s ease-out, transform 0.6s ease-out',
+            }}
+          >
+            How it works
+          </h2>
+
+          {/* Steps row */}
+          <div className="mt-16 flex flex-wrap justify-center gap-y-10">
+            {[
+              { num: '1', title: 'Register', desc: 'Submit your business details and apply to join' },
+              { num: '2', title: 'Pick a Template', desc: 'Choose Tuition Centre, Music School, Yoga Studio, or more' },
+              { num: '3', title: 'Customize', desc: 'Toggle modules, rename them, reorder your sidebar' },
+              { num: '4', title: 'Share Your Link', desc: 'Clients book online instantly via your public booking page' },
+              { num: '5', title: 'Manage Everything', desc: 'Calendar, attendance, invoicing — one dashboard' },
+            ].map((step, i, arr) => (
+              <div key={step.num} className="flex items-start">
+                {/* Step card */}
+                <div
+                  className="w-44 sm:w-48 text-center px-2"
+                  style={{
+                    opacity: stepsInView ? 1 : 0,
+                    transform: stepsInView ? 'translateY(0)' : 'translateY(20px)',
+                    transition: `opacity 0.5s ease-out ${i * 100}ms, transform 0.5s ease-out ${i * 100}ms`,
+                  }}
+                >
+                  <span className="font-display text-3xl text-indigo-400">{step.num}</span>
+                  <h3 className="mt-2 font-semibold text-white">{step.title}</h3>
+                  <p className="mt-1.5 text-sm text-slate-400 leading-relaxed">{step.desc}</p>
+                </div>
+
+                {/* Connector line between steps (desktop only) */}
+                {i < arr.length - 1 && (
+                  <div className="hidden lg:flex items-center self-center pt-1">
+                    <div className="w-8 border-t border-dashed border-slate-600" />
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </section>
