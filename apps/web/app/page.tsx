@@ -1,10 +1,27 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Menu, X, ArrowRight, CalendarDays, Users, Receipt, Globe, UserCog, Puzzle, GraduationCap, Music, Activity, Heart, Settings2 } from 'lucide-react'
+import {
+  Menu,
+  X,
+  ArrowRight,
+  CalendarDays,
+  Users,
+  Receipt,
+  Globe,
+  UserCog,
+  Puzzle,
+  GraduationCap,
+  Music,
+  Activity,
+  Heart,
+  Settings2,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useInView } from '@/hooks/use-in-view'
+
+/* ─── Data ────────────────────────────────────────────────────────────── */
 
 const navLinks = [
   { label: 'Features', href: '#features' },
@@ -17,67 +34,157 @@ const verticals = [
   'Yoga Studios',
   'Music Schools',
   'Wellness Centres',
-  'And more',
+  'Dance Academies',
 ]
 
-const features = [
+const templates = [
+  {
+    icon: GraduationCap,
+    name: 'Tuition Centre',
+    modules: ['Students', 'Courses', 'Tutors', 'Rooms'],
+    color: '#6366f1',
+    bgTint: 'rgba(99, 102, 241, 0.05)',
+    borderTint: 'rgba(99, 102, 241, 0.3)',
+  },
+  {
+    icon: Music,
+    name: 'Music School',
+    modules: ['Students', 'Lessons', 'Studios', 'Instruments'],
+    color: '#8b5cf6',
+    bgTint: 'rgba(139, 92, 246, 0.05)',
+    borderTint: 'rgba(139, 92, 246, 0.3)',
+  },
+  {
+    icon: Activity,
+    name: 'Yoga Studio',
+    modules: ['Members', 'Classes', 'Instructors', 'Booking'],
+    color: '#22c55e',
+    bgTint: 'rgba(34, 197, 94, 0.05)',
+    borderTint: 'rgba(34, 197, 94, 0.3)',
+  },
+  {
+    icon: Heart,
+    name: 'Wellness Centre',
+    modules: ['Clients', 'Treatments', 'Therapists', 'Rooms'],
+    color: '#ec4899',
+    bgTint: 'rgba(236, 72, 153, 0.05)',
+    borderTint: 'rgba(236, 72, 153, 0.3)',
+  },
+  {
+    icon: Settings2,
+    name: 'Build Your Own',
+    modules: ['Start blank', 'Enable what you need'],
+    color: '#64748b',
+    bgTint: 'rgba(100, 116, 139, 0.05)',
+    borderTint: 'rgba(100, 116, 139, 0.3)',
+    dashed: true,
+  },
+]
+
+const featuresLarge = [
   {
     icon: CalendarDays,
     title: 'Calendar',
-    description: 'Recurring classes and one-off appointments with drag-and-drop rescheduling.',
+    description: 'Recurring classes, one-off sessions, drag-and-drop rescheduling.',
   },
   {
     icon: Users,
     title: 'Clients',
-    description: 'Contact records, dependents, notes, and tags — all in one place.',
+    description: 'Contact records, dependents, notes, and tags in one place.',
   },
+]
+
+const featuresCompact = [
   {
     icon: Receipt,
     title: 'Invoicing',
-    description: 'Generate invoices, track payments, and calculate GST automatically.',
+    description: 'Generate invoices, track payments, calculate GST.',
   },
   {
     icon: Globe,
     title: 'Online Booking',
-    description: 'Share your public booking page — clients pick a slot, you get notified.',
+    description: 'Clients pick a slot from your public page.',
   },
   {
     icon: UserCog,
     title: 'Team',
-    description: 'Staff profiles, weekly availability, overrides, and schedule management.',
+    description: 'Staff profiles, availability, and schedules.',
   },
   {
     icon: Puzzle,
     title: 'Modular System',
-    description: 'Enable only what you need. Rename modules to match your vocabulary.',
+    description: 'Rename modules. Reorder your sidebar. Make it yours.',
     accent: true,
   },
 ]
 
+const steps = [
+  {
+    num: '1',
+    title: 'Pick a template',
+    desc: 'Choose the setup that matches your business, or start from scratch.',
+  },
+  {
+    num: '2',
+    title: 'Make it yours',
+    desc: 'Toggle modules, rename them, set your schedule and availability.',
+  },
+  {
+    num: '3',
+    title: 'Share your link',
+    desc: 'Your booking page goes live — clients book, you manage.',
+  },
+]
+
+const proofItems = [
+  'Built in Singapore',
+  '9 configurable modules',
+  'Multi-tenant ready',
+  'Free during beta',
+]
+
+/* ─── Component ───────────────────────────────────────────────────────── */
+
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { ref: featuresRef, inView: featuresInView } = useInView({ threshold: 0.1 })
-  const { ref: stepsRef, inView: stepsInView } = useInView({ threshold: 0.1 })
-  const { ref: templatesRef, inView: templatesInView } = useInView({ threshold: 0.1 })
-  const { ref: ctaRef, inView: ctaInView } = useInView({ threshold: 0.2 })
+  const [scrolled, setScrolled] = useState(false)
+  const [tickerIndex, setTickerIndex] = useState(0)
+  const [hoveredTemplate, setHoveredTemplate] = useState<number | null>(null)
+
+  const { ref: templatesRef, getStaggerStyle: templatesStagger, inView: templatesInView } = useInView({ threshold: 0.1, staggerInterval: 80 })
+  const { ref: featuresRef, getStaggerStyle: featuresStagger, inView: featuresInView } = useInView({ threshold: 0.1, staggerInterval: 100 })
+  const { ref: stepsRef, getStaggerStyle: stepsStagger, inView: stepsInView } = useInView({ threshold: 0.1, staggerInterval: 150 })
+  const { ref: proofRef, getStaggerStyle: proofStagger } = useInView({ threshold: 0.2, staggerInterval: 100 })
+  const { ref: ctaRef, getStaggerStyle: ctaStagger } = useInView({ threshold: 0.2 })
+
+  // Scroll shadow for nav
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 10)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Verticals ticker
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTickerIndex((prev) => (prev + 1) % verticals.length)
+    }, 2500)
+    return () => clearInterval(timer)
+  }, [])
 
   return (
-    <>
-      <style>{`
-        @keyframes fadeUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
-
+    <div className="min-h-screen" style={{ fontFamily: 'var(--font-body)' }}>
       {/* ── Sticky Nav ── */}
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
+      <nav
+        className={`sticky top-0 z-50 backdrop-blur-md border-b transition-shadow duration-300 ${
+          scrolled ? 'shadow-sm' : 'shadow-none'
+        }`}
+        style={{
+          backgroundColor: 'rgba(250, 250, 248, 0.9)',
+          borderColor: '#e2e8f0',
+          animation: 'fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both',
+        }}
+      >
         <div className="mx-auto max-w-6xl px-6 h-16 flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="font-display text-2xl text-indigo-500 tracking-tight">
@@ -100,10 +207,12 @@ export default function LandingPage() {
           {/* Right actions — desktop */}
           <div className="hidden md:flex items-center gap-3">
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/login">Sign In</Link>
+              <Link href="/login">Book a Demo</Link>
             </Button>
-            <Button size="sm" className="rounded-full px-5" asChild>
-              <Link href="/register">Get Started</Link>
+            <Button size="sm" className="rounded-full px-5 gap-1.5" asChild>
+              <Link href="/register">
+                Join Waitlist <ArrowRight className="size-3.5" />
+              </Link>
             </Button>
           </div>
 
@@ -120,9 +229,10 @@ export default function LandingPage() {
 
         {/* Mobile menu */}
         <div
-          className={`md:hidden overflow-hidden transition-all duration-300 ease-out ${
+          className={`md:hidden overflow-hidden transition-all duration-300 ${
             mobileMenuOpen ? 'max-h-72 opacity-100' : 'max-h-0 opacity-0'
           }`}
+          style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }}
         >
           <div className="px-6 pb-6 pt-2 flex flex-col gap-4 border-t border-slate-100">
             {navLinks.map((link) => (
@@ -137,10 +247,12 @@ export default function LandingPage() {
             ))}
             <div className="flex flex-col gap-2 pt-2">
               <Button variant="outline" size="sm" asChild>
-                <Link href="/login">Sign In</Link>
+                <Link href="/login">Book a Demo</Link>
               </Button>
               <Button size="sm" className="rounded-full" asChild>
-                <Link href="/register">Get Started</Link>
+                <Link href="/register">
+                  Join Waitlist <ArrowRight className="ml-1 size-3.5" />
+                </Link>
               </Button>
             </div>
           </div>
@@ -148,110 +260,308 @@ export default function LandingPage() {
       </nav>
 
       {/* ── Hero Section ── */}
-      <section
-        className="relative overflow-hidden bg-white"
-        style={{
-          backgroundImage: 'radial-gradient(circle, #e2e8f0 1px, transparent 1px)',
-          backgroundSize: '24px 24px',
-        }}
-      >
-        {/* Soft radial fade so the dot grid fades out at edges */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_40%,transparent_40%,white_100%)] pointer-events-none" />
+      <section className="relative overflow-hidden" style={{ backgroundColor: '#fafaf8' }}>
+        {/* Soft radial indigo glow */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'radial-gradient(ellipse 60% 50% at 50% 40%, rgba(99, 102, 241, 0.05), transparent 70%)',
+            animation: 'fadeUp 0.8s ease-out both',
+          }}
+        />
+
+        {/* Floating shapes */}
+        <div
+          className="absolute top-20 left-[10%] w-24 h-16 rounded-2xl opacity-[0.07]"
+          style={{
+            backgroundColor: '#6366f1',
+            animation: 'float 6s ease-in-out infinite',
+            animationDelay: '0s',
+          }}
+        />
+        <div
+          className="absolute top-32 right-[12%] w-20 h-20 rounded-2xl opacity-[0.05]"
+          style={{
+            backgroundColor: '#f59e0b',
+            animation: 'float 7s ease-in-out infinite',
+            animationDelay: '1s',
+          }}
+        />
+        <div
+          className="absolute bottom-24 left-[20%] w-16 h-12 rounded-xl opacity-[0.06]"
+          style={{
+            backgroundColor: '#6366f1',
+            animation: 'float 8s ease-in-out infinite',
+            animationDelay: '2s',
+          }}
+        />
 
         <div className="relative mx-auto max-w-3xl px-6 py-32 sm:py-40 text-center">
           {/* Headline */}
           <h1
-            className="font-display text-5xl sm:text-6xl text-slate-900 font-normal leading-[1.1] tracking-tight"
-            style={{ animation: 'fadeUp 0.6s ease-out both' }}
+            className="font-display text-4xl sm:text-5xl lg:text-6xl text-slate-900 font-normal leading-[1.1] tracking-tight"
+            style={{
+              animation: 'fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both',
+            }}
           >
-            Flexible management
+            One platform to run your
             <br />
-            for modern studios.
+            entire centre.
           </h1>
 
           {/* Subtitle */}
           <p
             className="mt-6 text-lg sm:text-xl text-slate-500 max-w-2xl mx-auto leading-relaxed"
-            style={{ animation: 'fadeUp 0.6s ease-out 0.12s both' }}
+            style={{
+              animation: 'fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both',
+            }}
           >
-            One platform for scheduling, clients, invoicing, and booking
-            — configured to fit your business.
+            Scheduling, clients, invoicing, and online booking —
+            configured to fit the way you work.
           </p>
 
           {/* CTA buttons */}
           <div
             className="mt-10 flex flex-wrap items-center justify-center gap-4"
-            style={{ animation: 'fadeUp 0.6s ease-out 0.24s both' }}
+            style={{
+              animation: 'fadeUp 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.7s both',
+            }}
           >
             <Button size="lg" className="rounded-full px-8 gap-2" asChild>
               <Link href="/register">
-                Get Started <ArrowRight className="size-4" />
+                Join the Waitlist <ArrowRight className="size-4" />
               </Link>
             </Button>
             <Button variant="outline" size="lg" className="rounded-full px-8" asChild>
-              <Link href="/login">Sign In</Link>
+              <Link href="/login">Book a Demo</Link>
             </Button>
           </div>
 
-          {/* Verticals */}
-          <p
+          {/* Verticals ticker */}
+          <div
             className="mt-14 text-sm text-slate-400 tracking-wide"
-            style={{ animation: 'fadeUp 0.6s ease-out 0.36s both' }}
+            style={{
+              animation: 'fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 1.2s both',
+            }}
           >
-            {verticals.map((v, i) => (
-              <span key={v}>
-                {i > 0 && <span className="mx-2 text-slate-300">&middot;</span>}
-                {v}
-              </span>
-            ))}
+            <span className="mr-2">Built for:</span>
+            <span className="relative inline-block h-5 w-40 overflow-hidden align-middle">
+              {verticals.map((v, i) => (
+                <span
+                  key={v}
+                  className="absolute inset-0 flex items-center justify-center font-medium text-indigo-500 transition-all duration-500"
+                  style={{
+                    opacity: tickerIndex === i ? 1 : 0,
+                    transform: tickerIndex === i
+                      ? 'translateY(0)'
+                      : tickerIndex > i || (tickerIndex === 0 && i === verticals.length - 1 && tickerIndex !== i)
+                        ? 'translateY(-8px)'
+                        : 'translateY(8px)',
+                    transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
+                  }}
+                >
+                  {v}
+                </span>
+              ))}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Templates Showcase ── */}
+      <section id="templates" className="py-24 sm:py-32" style={{ backgroundColor: '#fafaf8' }}>
+        <div ref={templatesRef} className="mx-auto max-w-6xl px-6">
+          {/* Section header */}
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <h2
+              className="font-display text-3xl sm:text-4xl text-slate-900 tracking-tight"
+              style={templatesStagger(0)}
+            >
+              Choose your starting point.
+            </h2>
+            <p
+              className="mt-4 text-base sm:text-lg text-slate-500 leading-relaxed"
+              style={templatesStagger(1)}
+            >
+              Pick the template that matches your business. Every module —
+              renamed, reordered, toggled — to fit your vocabulary.
+            </p>
+          </div>
+
+          {/* Template cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {templates.map((template, i) => {
+              const Icon = template.icon
+              const isHovered = hoveredTemplate === i
+              return (
+                <div
+                  key={template.name}
+                  className={`relative bg-white rounded-xl p-6 cursor-default transition-all duration-300 ${
+                    template.dashed
+                      ? 'border-2 border-dashed border-slate-300'
+                      : 'border border-slate-200'
+                  }`}
+                  style={{
+                    ...templatesStagger(i + 2),
+                    ...(isHovered
+                      ? {
+                          transform: 'translateY(-4px)',
+                          boxShadow: '0 10px 40px -10px rgba(0,0,0,0.1)',
+                          backgroundColor: template.bgTint,
+                          borderColor: template.borderTint,
+                        }
+                      : {}),
+                    ...(template.dashed && isHovered
+                      ? { borderColor: template.borderTint }
+                      : {}),
+                  }}
+                  onMouseEnter={() => setHoveredTemplate(i)}
+                  onMouseLeave={() => setHoveredTemplate(null)}
+                >
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors duration-300"
+                    style={{
+                      backgroundColor: isHovered ? `${template.color}15` : '#e0e7ff',
+                      color: isHovered ? template.color : '#6366f1',
+                    }}
+                  >
+                    <Icon className="size-5" />
+                  </div>
+                  <h3 className="font-semibold text-slate-900 mt-3 text-lg">{template.name}</h3>
+
+                  {/* Module list — reveals on hover */}
+                  <div className="mt-3 space-y-1.5 min-h-[80px]">
+                    {template.modules.map((mod, mi) => (
+                      <p
+                        key={mod}
+                        className="text-sm text-slate-500 transition-all duration-300"
+                        style={{
+                          opacity: isHovered ? 1 : 0,
+                          transform: isHovered ? 'translateY(0)' : 'translateY(6px)',
+                          transitionDelay: isHovered ? `${mi * 50}ms` : '0ms',
+                        }}
+                      >
+                        {mod}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Below cards text */}
+          <p
+            className="text-sm text-slate-400 mt-8 text-center"
+            style={templatesStagger(8)}
+          >
+            Or build your own from scratch{' '}
+            <span className="inline-block transition-transform group-hover:translate-x-1">
+              &rarr;
+            </span>
           </p>
         </div>
       </section>
 
-      {/* ── Features Section ── */}
-      <section id="features" className="bg-slate-50 py-24 sm:py-32">
+      {/* ── Features Bento Grid ── */}
+      <section id="features" className="bg-white py-24 sm:py-32">
         <div ref={featuresRef} className="mx-auto max-w-6xl px-6">
           {/* Section header */}
           <div className="text-center max-w-2xl mx-auto mb-16">
             <h2
               className="font-display text-3xl sm:text-4xl text-slate-900 tracking-tight"
-              style={{
-                opacity: featuresInView ? 1 : 0,
-                transform: featuresInView ? 'translateY(0)' : 'translateY(20px)',
-                transition: 'opacity 0.6s ease-out, transform 0.6s ease-out',
-              }}
+              style={featuresStagger(0)}
             >
-              Everything you need to run your business.
+              Everything to run your day.
             </h2>
             <p
               className="mt-4 text-base sm:text-lg text-slate-500 leading-relaxed"
-              style={{
-                opacity: featuresInView ? 1 : 0,
-                transform: featuresInView ? 'translateY(0)' : 'translateY(20px)',
-                transition: 'opacity 0.6s ease-out 0.08s, transform 0.6s ease-out 0.08s',
-              }}
+              style={featuresStagger(1)}
             >
-              Plio gives you the tools to manage your entire operation from one dashboard.
+              Six modules. Enable what you need, disable what you don&apos;t.
             </p>
           </div>
 
-          {/* Feature cards grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, i) => {
+          {/* Large cards row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {featuresLarge.map((feature, i) => {
               const Icon = feature.icon
               return (
                 <div
                   key={feature.title}
-                  className={`bg-white rounded-xl border border-slate-200 shadow-sm p-6 transition-shadow hover:shadow-md ${
-                    feature.accent ? 'border-l-4 border-l-indigo-500' : ''
-                  }`}
+                  className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
                   style={{
-                    opacity: featuresInView ? 1 : 0,
-                    transform: featuresInView ? 'translateY(0)' : 'translateY(20px)',
-                    transition: `opacity 0.5s ease-out ${i * 80}ms, transform 0.5s ease-out ${i * 80}ms`,
+                    ...featuresStagger(i + 2),
+                    ...(i === 0
+                      ? { animation: featuresInView ? 'slideInLeft 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both' : 'none', opacity: featuresInView ? undefined : 0 }
+                      : { animation: featuresInView ? 'slideInRight 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both' : 'none', opacity: featuresInView ? undefined : 0 }),
                   }}
                 >
                   <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                    <Icon className="size-5" />
+                  </div>
+                  <h3 className="mt-4 text-lg font-semibold text-slate-900">{feature.title}</h3>
+                  <p className="mt-2 text-sm text-slate-500 leading-relaxed">{feature.description}</p>
+
+                  {/* Mini CSS illustration */}
+                  {feature.title === 'Calendar' && (
+                    <div className="mt-6 grid grid-cols-7 gap-1">
+                      {Array.from({ length: 7 }).map((_, d) => (
+                        <div key={`header-${d}`} className="h-3 rounded-sm bg-indigo-100" />
+                      ))}
+                      {Array.from({ length: 21 }).map((_, d) => (
+                        <div
+                          key={`cell-${d}`}
+                          className={`h-6 rounded-sm ${
+                            [3, 10, 15, 18].includes(d) ? 'bg-indigo-200' : 'bg-slate-50'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {feature.title === 'Clients' && (
+                    <div className="mt-6 space-y-2">
+                      {[1, 2, 3, 4].map((row) => (
+                        <div key={row} className="flex items-center gap-3">
+                          <div className="w-7 h-7 rounded-full bg-indigo-100 flex-shrink-0" />
+                          <div className="flex-1 space-y-1">
+                            <div
+                              className="h-2.5 rounded-full bg-slate-100"
+                              style={{ width: `${60 + row * 8}%` }}
+                            />
+                            <div
+                              className="h-2 rounded-full bg-slate-50"
+                              style={{ width: `${40 + row * 5}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Compact cards row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {featuresCompact.map((feature, i) => {
+              const Icon = feature.icon
+              return (
+                <div
+                  key={feature.title}
+                  className={`bg-white rounded-xl border border-slate-200 shadow-sm p-6 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${
+                    feature.accent ? 'border-l-4 border-l-amber-400' : ''
+                  }`}
+                  style={featuresStagger(i + 4)}
+                >
+                  <div
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      feature.accent
+                        ? 'bg-amber-50 text-amber-600'
+                        : 'bg-indigo-50 text-indigo-600'
+                    }`}
+                  >
                     <Icon className="size-5" />
                   </div>
                   <h3 className="mt-4 text-lg font-semibold text-slate-900">{feature.title}</h3>
@@ -263,176 +573,190 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── How It Works Section ── */}
-      <section id="how-it-works" className="bg-slate-900 text-white py-24 sm:py-32">
+      {/* ── How It Works ── */}
+      <section id="how-it-works" className="py-24 sm:py-32" style={{ backgroundColor: '#fafaf8' }}>
         <div ref={stepsRef} className="mx-auto max-w-6xl px-6">
           {/* Section header */}
           <h2
-            className="font-display text-3xl sm:text-4xl text-center tracking-tight"
-            style={{
-              opacity: stepsInView ? 1 : 0,
-              transform: stepsInView ? 'translateY(0)' : 'translateY(20px)',
-              transition: 'opacity 0.6s ease-out, transform 0.6s ease-out',
-            }}
+            className="font-display text-3xl sm:text-4xl text-slate-900 tracking-tight text-center mb-16"
+            style={stepsStagger(0)}
           >
-            How it works
+            Up and running in minutes.
           </h2>
 
-          {/* Steps row */}
-          <div className="mt-16 flex flex-wrap justify-center gap-y-10">
-            {[
-              { num: '1', title: 'Register', desc: 'Submit your business details and apply to join' },
-              { num: '2', title: 'Pick a Template', desc: 'Choose Tuition Centre, Music School, Yoga Studio, or more' },
-              { num: '3', title: 'Customize', desc: 'Toggle modules, rename them, reorder your sidebar' },
-              { num: '4', title: 'Share Your Link', desc: 'Clients book online instantly via your public booking page' },
-              { num: '5', title: 'Manage Everything', desc: 'Calendar, attendance, invoicing — one dashboard' },
-            ].map((step, i, arr) => (
-              <div key={step.num} className="flex items-start">
-                {/* Step card */}
-                <div
-                  className="w-44 sm:w-48 text-center px-2"
+          {/* Steps with connector */}
+          <div className="relative">
+            {/* Dashed connector line — desktop only */}
+            <div className="hidden lg:block absolute top-10 left-[16%] right-[16%] h-0">
+              <svg width="100%" height="2" className="overflow-visible">
+                <line
+                  x1="0"
+                  y1="1"
+                  x2="100%"
+                  y2="1"
+                  stroke="#6366f1"
+                  strokeWidth="2"
+                  strokeDasharray="6 6"
+                  strokeOpacity="0.2"
                   style={{
-                    opacity: stepsInView ? 1 : 0,
-                    transform: stepsInView ? 'translateY(0)' : 'translateY(20px)',
-                    transition: `opacity 0.5s ease-out ${i * 100}ms, transform 0.5s ease-out ${i * 100}ms`,
+                    strokeDashoffset: stepsInView ? '0' : '200',
+                    transition: 'stroke-dashoffset 1.5s cubic-bezier(0.16, 1, 0.3, 1) 0.3s',
                   }}
-                >
-                  <span className="font-display text-3xl text-indigo-400">{step.num}</span>
-                  <h3 className="mt-2 font-semibold text-white">{step.title}</h3>
-                  <p className="mt-1.5 text-sm text-slate-400 leading-relaxed">{step.desc}</p>
-                </div>
+                />
+              </svg>
+            </div>
 
-                {/* Connector line between steps (desktop only) */}
-                {i < arr.length - 1 && (
-                  <div className="hidden lg:flex items-center self-center pt-1">
-                    <div className="w-8 border-t border-dashed border-slate-600" />
-                  </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 lg:gap-8">
+              {steps.map((step, i) => (
+                <div
+                  key={step.num}
+                  className="text-center"
+                  style={stepsStagger(i + 1)}
+                >
+                  <span
+                    className="inline-block font-display text-4xl text-indigo-500 transition-transform duration-500"
+                    style={{
+                      transform: stepsInView ? 'scale(1)' : 'scale(0.5)',
+                      transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+                      transitionDelay: `${i * 150 + 200}ms`,
+                    }}
+                  >
+                    {step.num}
+                  </span>
+                  <h3 className="mt-3 font-semibold text-lg text-slate-900">{step.title}</h3>
+                  <p className="mt-2 text-sm text-slate-500 leading-relaxed max-w-xs mx-auto">
+                    {step.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Social Proof Strip ── */}
+      <section className="bg-white border-y border-slate-200">
+        <div ref={proofRef} className="mx-auto max-w-6xl px-6 py-12">
+          <div className="flex flex-wrap items-center justify-center gap-x-0 gap-y-6">
+            {proofItems.map((item, i) => (
+              <div key={item} className="flex items-center">
+                {i > 0 && (
+                  <div className="hidden sm:block w-px h-8 bg-slate-200 mx-8" />
                 )}
+                <p
+                  className="text-sm font-medium text-slate-700 text-center px-4 sm:px-0"
+                  style={proofStagger(i)}
+                >
+                  {item}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Templates Section ── */}
-      <section id="templates" className="bg-white py-24 sm:py-32">
-        <div ref={templatesRef} className="mx-auto max-w-6xl px-6">
-          {/* Section header */}
-          <h2
-            className="font-display text-3xl sm:text-4xl text-slate-900 tracking-tight text-center"
-            style={{
-              opacity: templatesInView ? 1 : 0,
-              transform: templatesInView ? 'translateY(0)' : 'translateY(20px)',
-              transition: 'opacity 0.6s ease-out, transform 0.6s ease-out',
-            }}
-          >
-            Start from a template, make it yours.
-          </h2>
-
-          {/* Template cards */}
-          <div
-            className="mt-14 flex gap-4 overflow-x-auto pb-4 sm:pb-0 snap-x snap-mandatory sm:snap-none sm:overflow-visible sm:justify-center"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            {[
-              { icon: GraduationCap, name: 'Tuition Centre', modules: 'Students \u00b7 Courses \u00b7 Tutors' },
-              { icon: Music, name: 'Music School', modules: 'Students \u00b7 Lessons \u00b7 Studios' },
-              { icon: Activity, name: 'Yoga Studio', modules: 'Members \u00b7 Classes \u00b7 Booking' },
-              { icon: Heart, name: 'Wellness Centre', modules: 'Clients \u00b7 Treatments \u00b7 Rooms' },
-              { icon: Settings2, name: 'General', modules: 'All default module names' },
-            ].map((template, i) => {
-              const Icon = template.icon
-              return (
-                <div
-                  key={template.name}
-                  className="min-w-[220px] flex-shrink-0 snap-start bg-white rounded-xl border border-slate-200 p-6 hover:scale-[1.03] hover:shadow-md transition-all duration-200 cursor-default"
-                  style={{
-                    opacity: templatesInView ? 1 : 0,
-                    transform: templatesInView ? 'translateY(0)' : 'translateY(20px)',
-                    transition: `opacity 0.5s ease-out ${i * 80}ms, transform 0.5s ease-out ${i * 80}ms`,
-                  }}
-                >
-                  <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                    <Icon className="size-5" />
-                  </div>
-                  <h3 className="font-semibold text-slate-900 mt-3">{template.name}</h3>
-                  <p className="text-sm text-slate-500 mt-1">{template.modules}</p>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Below cards text */}
-          <p
-            className="text-sm text-slate-400 mt-6 text-center"
-            style={{
-              opacity: templatesInView ? 1 : 0,
-              transition: 'opacity 0.6s ease-out 0.4s',
-            }}
-          >
-            Or build your own from scratch
-          </p>
-        </div>
-      </section>
-
       {/* ── CTA Banner ── */}
-      <section className="relative bg-indigo-600 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.15),transparent_70%)] pointer-events-none" />
-        <div ref={ctaRef} className="relative mx-auto max-w-3xl px-6 py-20 sm:py-24 text-center">
+      <section className="relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #6366f1, #818cf8)' }}>
+        {/* Radial glow overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.12), transparent 70%)',
+          }}
+        />
+
+        <div ref={ctaRef} className="relative mx-auto max-w-3xl px-6 py-20 sm:py-28 text-center">
           <h2
             className="font-display text-3xl sm:text-4xl text-white tracking-tight"
-            style={{
-              opacity: ctaInView ? 1 : 0,
-              transform: ctaInView ? 'translateY(0)' : 'translateY(20px)',
-              transition: 'opacity 0.6s ease-out, transform 0.6s ease-out',
-            }}
+            style={ctaStagger(0)}
           >
-            Ready to digitize your business?
+            Ready to ditch the spreadsheet?
           </h2>
           <p
             className="mt-4 text-base text-indigo-100"
-            style={{
-              opacity: ctaInView ? 1 : 0,
-              transform: ctaInView ? 'translateY(0)' : 'translateY(20px)',
-              transition: 'opacity 0.6s ease-out 0.08s, transform 0.6s ease-out 0.08s',
-            }}
+            style={ctaStagger(1)}
           >
-            Join businesses across Singapore already using Plio.
+            Join the waitlist — we&apos;ll let you know when it&apos;s your turn.
           </p>
-          <div
-            className="mt-8"
-            style={{
-              opacity: ctaInView ? 1 : 0,
-              transform: ctaInView ? 'translateY(0)' : 'translateY(20px)',
-              transition: 'opacity 0.6s ease-out 0.16s, transform 0.6s ease-out 0.16s',
-            }}
+
+          {/* Inline email form */}
+          <form
+            onSubmit={(e) => e.preventDefault()}
+            className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto"
+            style={ctaStagger(2)}
           >
-            <Button className="bg-white text-indigo-600 hover:bg-indigo-50 rounded-full px-8" size="lg" asChild>
-              <Link href="/register">
-                Get Started — It&apos;s Free <ArrowRight className="ml-2 size-4" />
-              </Link>
-            </Button>
-          </div>
+            <input
+              type="email"
+              placeholder="your@email.com"
+              className="w-full sm:flex-1 px-4 py-3 rounded-full bg-white/95 text-slate-900 placeholder:text-slate-400 text-sm outline-none transition-shadow duration-300 focus:ring-2 focus:ring-white/50"
+              style={{ boxShadow: '0 0 0 0 rgba(255,255,255,0)' }}
+              onFocus={(e) => {
+                e.currentTarget.style.animation = 'glowPulse 2s ease-in-out infinite'
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.animation = 'none'
+              }}
+            />
+            <button
+              type="submit"
+              className="w-full sm:w-auto px-6 py-3 rounded-full bg-white text-indigo-600 font-medium text-sm transition-all duration-200 hover:scale-105 flex items-center justify-center gap-2 group"
+            >
+              Join Waitlist
+              <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" />
+            </button>
+          </form>
+
+          <p className="mt-6" style={ctaStagger(3)}>
+            <a
+              href="/login"
+              className="text-sm text-indigo-200 hover:text-white transition-colors inline-flex items-center gap-1 group"
+            >
+              Or book a personal demo
+              <ArrowRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-1" />
+            </a>
+          </p>
         </div>
       </section>
 
       {/* ── Footer ── */}
-      <footer className="bg-slate-50 border-t border-slate-200">
-        <div className="mx-auto max-w-6xl px-6 py-8 flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4 text-center sm:text-left">
-          <div>
-            <span className="font-display text-lg text-slate-900">Plio</span>
-            <p className="text-sm text-slate-400">&copy; 2026</p>
-          </div>
-          <div className="flex flex-col items-center sm:items-end gap-1.5">
-            <div className="flex items-center gap-1 text-sm">
-              <Link href="/privacy" className="text-slate-500 hover:text-slate-900 transition-colors">Privacy</Link>
-              <span className="text-slate-300">&middot;</span>
-              <Link href="/terms" className="text-slate-500 hover:text-slate-900 transition-colors">Terms</Link>
+      <footer className="border-t border-slate-200" style={{ backgroundColor: '#fafaf8' }}>
+        <div className="mx-auto max-w-6xl px-6 py-12">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+            {/* Col 1: Brand */}
+            <div>
+              <span className="font-display text-xl text-indigo-500">Plio</span>
+              <p className="mt-2 text-sm text-slate-400">Built in Singapore</p>
+              <p className="text-sm text-slate-400">&copy; 2026</p>
             </div>
-            <p className="text-sm text-slate-400">Built in Singapore</p>
+
+            {/* Col 2: Product */}
+            <div>
+              <h4 className="text-sm font-semibold text-slate-900 mb-3">Product</h4>
+              <div className="flex flex-col gap-2">
+                <a href="#features" className="text-sm text-slate-500 hover:text-slate-900 transition-colors">
+                  Features
+                </a>
+                <a href="#templates" className="text-sm text-slate-500 hover:text-slate-900 transition-colors">
+                  Templates
+                </a>
+              </div>
+            </div>
+
+            {/* Col 3: Legal */}
+            <div>
+              <h4 className="text-sm font-semibold text-slate-900 mb-3">Legal</h4>
+              <div className="flex flex-col gap-2">
+                <Link href="/privacy" className="text-sm text-slate-500 hover:text-slate-900 transition-colors">
+                  Privacy
+                </Link>
+                <Link href="/terms" className="text-sm text-slate-500 hover:text-slate-900 transition-colors">
+                  Terms
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </footer>
-    </>
+    </div>
   )
 }
