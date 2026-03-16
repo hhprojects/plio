@@ -1,16 +1,21 @@
-# Plio
+# Plio — Modular Business Management Platform
 
-**Flexible Management for Modern Studios.**
+A white-label, modular workflow management platform for small service businesses in Singapore. Instead of building separate products for each vertical, Plio provides a configurable module system that businesses tailor to their needs — tuition centres, music schools, yoga studios, wellness clinics, salons, and more.
 
-A multi-tenant SaaS platform that digitizes operations for tuition centers, yoga studios, music schools, and enrichment providers in Singapore. One deployment serves many centers — each with its own isolated data, branding, and configuration.
+One deployment serves many businesses — each with its own isolated data, branding, and configuration.
 
 ---
 
 ## Value Proposition
 
-Small education and enrichment businesses in Singapore still run on WhatsApp groups, spreadsheets, and paper sign-in sheets. Plio replaces that chaos with a single system that handles scheduling, attendance, credits, invoicing, and parent communication — purpose-built for the local market (PayNow, PDPA, public holidays, GST).
+Small service businesses in Singapore still run on WhatsApp groups and spreadsheets. Plio replaces that with a single platform where owners can:
 
-**For portfolio reviewers:** This project demonstrates multi-tenant database design, complex scheduling logic (recurring events, conflict detection, makeup credits), role-based access control via Row-Level Security, real-time updates, and a payment verification workflow — all in a production-grade Next.js + Supabase stack.
+- **Configure, not code.** Enable modules, rename sidebar labels, set an accent color — no development needed.
+- **Start from a template.** Choose a preset (Tuition Centre, Music School, Yoga Studio, Wellness Centre, General) to get sensible defaults, then customize.
+- **Scale without switching tools.** One platform covers scheduling, client records, team management, invoicing, and online booking.
+- **Own the experience.** White-label branding (logo, color, business name) makes it feel like their own product, not a generic SaaS.
+
+**For portfolio reviewers:** This project demonstrates multi-tenant database design, a modular feature system, complex scheduling logic (recurring events, conflict detection, makeup credits), role-based access control via Row-Level Security, and a payment verification workflow — all in a production-grade Next.js + Supabase stack.
 
 ---
 
@@ -20,9 +25,51 @@ Plio follows a **shared-database, shared-schema** multi-tenancy strategy:
 
 - Every data table carries a `tenant_id` column
 - Supabase Row-Level Security (RLS) policies enforce tenant isolation at the database level — no application code can accidentally leak data across tenants
-- Each tenant gets a unique slug (e.g., `bright-tuition`) used in URLs and configuration
+- Each tenant gets a unique slug (e.g., `bright-learning`) used in booking URLs and configuration
 - Tenant-level settings (timezone, currency, cancellation policy hours, GST registration) are stored as JSONB, avoiding schema changes per tenant
-- A single Vercel deployment serves all tenants; tenant resolution happens via subdomain or slug in the URL path
+- A single Vercel deployment serves all tenants; tenant resolution happens via the authenticated user's profile
+
+---
+
+## Module System
+
+Plio replaces the old dual-vertical model (education vs wellness) with a universal module system. Every tenant configures which modules are active and how they appear.
+
+### Modules
+
+| Module       | Default Title | Always On | Dependencies | Description                              |
+|-------------|---------------|-----------|--------------|------------------------------------------|
+| `dashboard` | Dashboard     | Yes       | —            | Overview stats and quick actions         |
+| `calendar`  | Calendar      | No        | services     | Visual schedule with day/week/month views|
+| `clients`   | Clients       | No        | —            | Contact records and dependents           |
+| `services`  | Services      | No        | —            | Recurring classes and bookable services  |
+| `team`      | Team          | Yes       | —            | Staff profiles, availability, roles      |
+| `rooms`     | Rooms         | No        | —            | Physical spaces and capacity tracking    |
+| `invoicing` | Invoicing     | No        | clients      | Invoice generation and payment tracking  |
+| `booking`   | Booking       | No        | services, calendar | Public booking page for clients    |
+| `settings`  | Settings      | Yes       | —            | Tenant config, branding, module management|
+
+### How It Works
+
+- **`modules` table** — System-level registry of all 9 modules. Seeded at deployment. Contains slug, default title, icon, always_on flag, and dependencies.
+- **`tenant_modules` table** — Per-tenant configuration. Each row links a tenant to a module and stores: `enabled` (boolean), `custom_title` (nullable, overrides default), `sort_order`, and `config` (JSONB for module-specific settings like calendar mode).
+- The sidebar reads `tenant_modules` for the current tenant, renders only enabled modules using `custom_title ?? default_title`, sorted by `sort_order`.
+- Role-based filtering ensures clients see a reduced set of modules (dashboard, calendar, invoicing) and staff see a subset (dashboard, calendar, clients, team).
+- `requireModule(slug)` server-side guard returns 404 if a module is not enabled for the tenant.
+
+### Onboarding Templates
+
+Five presets configure modules with appropriate titles during the onboarding wizard:
+
+| Template          | Pre-Enabled Modules | Example Customizations                                      |
+|-------------------|---------------------|-------------------------------------------------------------|
+| Tuition Centre    | calendar (recurring), clients, services, rooms, invoicing | Clients → "Students", Services → "Courses" |
+| Music School      | calendar (both), clients, services, rooms, invoicing, booking | Clients → "Students", Services → "Lessons" |
+| Yoga Studio       | calendar (both), clients, services, invoicing, booking | Clients → "Members", Services → "Classes" |
+| Wellness Centre   | calendar (appointments), clients, services, rooms, invoicing, booking | Services → "Treatments" |
+| General           | calendar (both), clients, services, invoicing | All defaults |
+
+A "Build Your Own" option lets businesses select modules individually and set custom titles from scratch. After choosing any template, the business can further toggle modules, reorder the sidebar, and rename titles.
 
 ---
 
@@ -30,51 +77,57 @@ Plio follows a **shared-database, shared-schema** multi-tenancy strategy:
 
 | Layer | Technology | Why |
 |---|---|---|
-| Framework | **Next.js 15 (App Router)** | Server Components, Server Actions, streaming, file-based routing |
+| Framework | **Next.js 16 (App Router)**, React 19, TypeScript 5 | Server Components, Server Actions, streaming, file-based routing |
 | Styling | **Tailwind CSS 4** | Utility-first, consistent design tokens, zero runtime |
-| Components | **Shadcn UI** | Accessible, composable, owns the source code (no black-box library) |
-| Backend / DB | **Supabase (PostgreSQL)** | Auth, RLS, Realtime subscriptions, Edge Functions, Storage — one platform |
-| State | **Zustand** | Minimal boilerplate vs Redux; built-in devtools; works with Server Components |
-| Calendar | **FullCalendar** | Mature, drag-and-drop, resource timeline views, recurring event support |
-| Email | **React Email + Resend** | Type-safe email templates, reliable delivery, free tier covers demo |
-| Payments | **Stripe (PayNow mode)** | Official PayNow support via Stripe; test mode for portfolio demo |
-| Monorepo | **Turborepo** | Shared packages, parallel builds, remote caching |
-| Testing | **Vitest + Playwright** | Fast unit tests (Vitest), reliable E2E (Playwright) |
-| Deployment | **Vercel** | Preview URLs per PR, edge network, zero-config Next.js hosting |
-| CI/CD | **GitHub Actions** | Lint, type-check, test, deploy pipeline |
+| Components | **Shadcn UI** (New York style) | Accessible, composable, owns the source code |
+| Backend / DB | **Supabase (PostgreSQL)** | Auth, RLS, Realtime subscriptions, Storage — one platform |
+| State | **Zustand 5** | Minimal boilerplate; works with Server Components |
+| Calendar | **FullCalendar 6** | Mature, drag-and-drop, resource timeline views, recurring event support |
+| Email | **React Email + Resend** | Type-safe email templates, reliable delivery |
+| Forms | **React Hook Form + Zod 4** | Declarative validation with type-safe schemas |
+| Monorepo | **Turborepo + pnpm** | Shared packages, parallel builds |
+| Testing | **Vitest** | Fast unit tests for business logic |
+| Deployment | **Vercel** | Zero-config Next.js hosting |
+| Icons | **Lucide React** | Consistent icon set |
+| Toasts | **Sonner** | Lightweight toast notifications |
 
 ### Monorepo Structure
 
 ```
 plio/
-├── apps/
-│   └── web/                    # Next.js application
-│       ├── app/                # App Router pages & layouts
-│       │   ├── (auth)/         # Login, signup, forgot password
-│       │   ├── (dashboard)/    # Authenticated routes
-│       │   │   ├── admin/      # Admin command center
-│       │   │   ├── tutor/      # Tutor portal
-│       │   │   └── parent/     # Parent portal
-│       │   └── api/            # API routes (webhooks)
-│       ├── components/         # App-specific components
-│       ├── lib/                # Supabase client, utils, constants
-│       ├── stores/             # Zustand stores
-│       └── hooks/              # Custom React hooks
-├── packages/
-│   ├── ui/                     # Shared Shadcn components
-│   ├── db/                     # Supabase types, migrations, seed scripts
-│   ├── email/                  # React Email templates
-│   └── utils/                  # Shared utilities (date helpers, RRULE parser, GST calc)
-├── supabase/
-│   ├── migrations/             # SQL migration files
-│   ├── seed.sql                # Demo data
-│   └── config.toml             # Supabase project config
-├── turbo.json
-├── package.json
-└── .github/
-    └── workflows/
-        └── ci.yml
+├── apps/web/                    → Next.js application
+│   ├── app/
+│   │   ├── (auth)/              → Login, signup, forgot password
+│   │   ├── (dashboard)/         → Protected, single layout for all roles
+│   │   │   ├── dashboard/       → Overview stats
+│   │   │   ├── calendar/        → FullCalendar views
+│   │   │   ├── clients/         → Contact management
+│   │   │   ├── services/        → Service definitions
+│   │   │   ├── team/            → Staff management
+│   │   │   ├── rooms/           → Room management
+│   │   │   ├── invoicing/       → Invoice & payment tracking
+│   │   │   ├── booking/         → Booking management
+│   │   │   ├── settings/        → Branding & module config
+│   │   │   ├── platform/        → Super admin only (waitlist, tenants)
+│   │   │   ├── parent/          → Parent portal views
+│   │   │   └── tutor/           → Tutor portal views
+│   │   ├── (public)/            → Public pages (booking, privacy, terms)
+│   │   └── onboarding/          → Multi-step wizard for new tenants
+│   ├── components/              → UI + feature components
+│   ├── lib/                     → Auth, Supabase clients, scheduling logic
+│   ├── stores/                  → Zustand stores
+│   └── hooks/                   → Custom React hooks
+├── packages/db/                 → Database types (@plio/db)
+├── packages/utils/              → Pure utilities (@plio/utils)
+├── packages/ui/                 → Shared UI components (@plio/ui)
+├── packages/email/              → Email templates (@plio/email)
+├── supabase/                    → Migrations (27 files) and config
+└── turbo.json
 ```
+
+**Import aliases:**
+- `@/*` resolves to `apps/web/*` (e.g., `@/components/ui/button`)
+- Cross-package imports use `@plio/db`, `@plio/utils`, `@plio/ui`, `@plio/email`
 
 ---
 
@@ -88,8 +141,8 @@ plio/
 │  ┌───────────────────────────────────────────────────┐  │
 │  │              Next.js App (SSR + RSC)              │  │
 │  │  ┌──────────┐  ┌──────────┐  ┌───────────────┐   │  │
-│  │  │  Server   │  │  Server  │  │  API Routes   │   │  │
-│  │  │Components │  │ Actions  │  │  (Webhooks)   │   │  │
+│  │  │  Server   │  │  Server  │  │  Middleware    │   │  │
+│  │  │Components │  │ Actions  │  │  (Auth guard) │   │  │
 │  │  └────┬─────┘  └────┬─────┘  └──────┬────────┘   │  │
 │  └───────┼──────────────┼───────────────┼────────────┘  │
 └──────────┼──────────────┼───────────────┼───────────────┘
@@ -101,38 +154,42 @@ plio/
 │  │   Auth   │  │ Postgres │  │Realtime│  │ Storage  │  │
 │  │  (JWT)   │  │  + RLS   │  │  (WS)  │  │ (S3)    │  │
 │  └──────────┘  └──────────┘  └────────┘  └──────────┘  │
-│  ┌──────────────────┐                                   │
-│  │  Edge Functions   │ ← Cron jobs (invoice generation) │
-│  └──────────────────┘                                   │
 └─────────────────────────────────────────────────────────┘
-           │                              │
-           ▼                              ▼
-    ┌──────────┐                   ┌──────────┐
-    │  Stripe  │                   │  Resend  │
-    │ (PayNow) │                   │ (Email)  │
-    └──────────┘                   └──────────┘
+                                             │
+                                             ▼
+                                      ┌──────────┐
+                                      │  Resend  │
+                                      │ (Email)  │
+                                      └──────────┘
 ```
 
 ### Auth Flow
 
-1. User signs up or logs in via Supabase Auth (email/password or magic link)
-2. `on_auth_user_created` trigger inserts a row into `profiles` with default role `parent`
-3. Admin assigns user to a tenant and upgrades role if needed
-4. Every authenticated request carries a JWT; RLS policies extract `auth.uid()` and match against `profiles.user_id` and `profiles.tenant_id`
-5. Client-side route guards redirect users to their role-appropriate dashboard
+1. User signs up or logs in via Supabase Auth (email/password)
+2. Middleware (`middleware.ts`) refreshes auth tokens on every request
+3. Protected routes redirect unauthenticated users to `/login`
+4. `getTenantId()` (React `cache()`) extracts `tenantId`, `profileId`, and `role` from the authenticated user's profile — runs once per request
+5. RLS policies extract `auth.uid()` and match against `profiles.user_id` and `profiles.tenant_id`
+6. Client-side route guards redirect users to their role-appropriate views
 
 ### API Layer
 
-- **Server Actions** for all mutations (create class, enroll student, generate invoice)
-- **Server Components** for data fetching (calendar view, student list, dashboard stats)
-- **API Routes** only for external webhooks (Stripe payment confirmation, Resend delivery status)
+- **Server Actions** for all mutations (create service, enroll student, generate invoice)
+- **Server Components** for data fetching (calendar view, client list, dashboard stats)
+- No dedicated API routes — all server logic is in Next.js Server Actions
 - Supabase client is instantiated server-side with the user's JWT for RLS enforcement
 
-### Realtime
+### Server Actions Pattern
 
-- Supabase Realtime channels scoped by `tenant_id`
-- Calendar subscribes to `class_instances` changes — drag-and-drop updates appear instantly for all admin users in the same tenant
-- Parents receive real-time notifications for class cancellations, schedule changes, payment confirmations
+```
+getTenantId() → Zod validation → Supabase query (RLS-scoped) → revalidatePath
+```
+
+### Supabase Clients
+
+- `lib/supabase/server.ts` — `createClient()`: SSR client with cookie auth. Used in Server Components and Actions for authenticated users.
+- `lib/supabase/client.ts` — `createBrowserClient()`: For "use client" components.
+- `lib/supabase/admin.ts` — `createAdminClient()`: Service role key, bypasses RLS. Server-only. Used for public/unauthenticated operations (booking page, waitlist, invites, platform admin).
 
 ---
 
@@ -143,17 +200,26 @@ plio/
 ```
 tenants ─┬─< profiles ──< notifications
          │       │
-         │       ├──< students ──< enrollments >── class_instances
-         │       │        │                              │
-         │       │        └──< credit_ledger >───────────┘
-         │       │
-         │       └── (as tutor) ──< recurring_schedules ──< class_instances
+         ├─< modules (system)
          │
-         ├─< courses ──< recurring_schedules
+         ├─< tenant_modules (per-tenant config)
+         │
+         ├─< contacts ──< contact_dependents
+         │       │   └──< contact_notes
+         │       ├──< enrollments >── sessions
+         │       └──< credit_ledger
+         │
+         ├─< team_members ──< team_availability
+         │       │       └──< availability_overrides
+         │       └──< schedules ──< sessions
+         │
+         ├─< services ──< schedules
          │
          ├─< rooms
          ├─< holidays
          ├─< invoices ──< payments
+         ├─< waitlist
+         ├─< invitations
          └─< audit_log
 ```
 
@@ -166,10 +232,11 @@ The root entity. Every other table references a tenant.
 | Column | Type | Notes |
 |---|---|---|
 | `id` | `uuid` PK | Default `gen_random_uuid()` |
-| `name` | `text` | e.g., "Bright Tuition Centre" |
-| `slug` | `text` UNIQUE | URL-safe identifier, e.g., `bright-tuition` |
-| `settings` | `jsonb` | `{ timezone, currency, cancellation_hours, gst_registered, gst_rate, logo_url }` |
+| `name` | `text` | e.g., "Bright Learning Hub" |
+| `slug` | `text` UNIQUE | URL-safe identifier, e.g., `bright-learning` |
+| `settings` | `jsonb` | `{ timezone, currency, cancellation_hours, gst_registered, gst_rate, logo_url, accent_color, business_name }` |
 | `subscription_tier` | `text` | `free`, `starter`, `pro` |
+| `active` | `boolean` | Default `true` — super admin can disable tenants |
 | `created_at` | `timestamptz` | Default `now()` |
 
 #### `profiles`
@@ -181,50 +248,239 @@ Every authenticated user has one profile per tenant. Linked to Supabase Auth via
 | `id` | `uuid` PK | |
 | `tenant_id` | `uuid` FK → tenants | |
 | `user_id` | `uuid` FK → auth.users | Supabase Auth reference |
-| `role` | `text` | `super_admin`, `admin`, `tutor`, `parent` |
+| `role` | `text` | `super_admin`, `admin`, `staff`, `client` |
 | `full_name` | `text` | |
 | `email` | `text` | |
-| `phone` | `text` | E.164 format, e.g., `+6591234567` |
+| `phone` | `text` | Nullable, E.164 format |
 | `avatar_url` | `text` | Nullable |
-| `nric_masked` | `text` | e.g., `T****567A` — stored masked, never stored in full |
+| `nric_masked` | `text` | Nullable, e.g., `T****567A` — stored masked, never in full |
 | `is_active` | `boolean` | Default `true` |
 | `created_at` | `timestamptz` | |
 
 **Index:** `(tenant_id, user_id)` UNIQUE — one profile per user per tenant.
 
-#### `students`
+#### `modules`
 
-Students are dependents of parent profiles. A student is not a user — they don't log in.
+System-level registry of available modules. Seeded via migration.
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | `uuid` PK | |
-| `tenant_id` | `uuid` FK → tenants | |
-| `parent_id` | `uuid` FK → profiles | The parent who manages this student |
-| `full_name` | `text` | |
-| `date_of_birth` | `date` | Nullable |
-| `school` | `text` | Nullable, e.g., "Raffles Institution" |
-| `level` | `text` | e.g., "Sec 3", "P5" |
-| `notes` | `text` | Internal admin notes |
-| `is_active` | `boolean` | Default `true` |
+| `slug` | `text` UNIQUE | e.g., `calendar`, `clients` |
+| `default_title` | `text` | e.g., "Calendar" |
+| `icon` | `text` | Lucide icon name, e.g., `CalendarDays` |
+| `always_on` | `boolean` | `true` for dashboard, team, settings |
+| `dependencies` | `text[]` | Module slugs this depends on |
 | `created_at` | `timestamptz` | |
 
-**Index:** `(tenant_id, parent_id)`.
+#### `tenant_modules`
 
-#### `courses`
-
-A course is a template (e.g., "Sec 3 E-Math"). Classes are instances of courses.
+Per-tenant module configuration.
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | `uuid` PK | |
 | `tenant_id` | `uuid` FK → tenants | |
-| `title` | `text` | e.g., "Sec 3 E-Math" |
+| `module_id` | `uuid` FK → modules | |
+| `enabled` | `boolean` | |
+| `custom_title` | `text` | Nullable — overrides `default_title` |
+| `sort_order` | `integer` | Sidebar ordering |
+| `config` | `jsonb` | Module-specific settings (e.g., `{ recurring_enabled, appointments_enabled }` for calendar) |
+| `created_at` | `timestamptz` | |
+| `updated_at` | `timestamptz` | |
+
+**Unique constraint:** `(tenant_id, module_id)`.
+
+#### `contacts`
+
+Unified entity for clients, students, parents — anyone the business serves.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` PK | |
+| `tenant_id` | `uuid` FK → tenants | |
+| `name` | `text` | |
+| `email` | `text` | Nullable |
+| `phone` | `text` | Nullable |
+| `notes` | `text` | Nullable |
+| `tags` | `text[]` | e.g., `["parent", "vip"]` |
+| `created_by` | `uuid` FK → profiles | Nullable |
+| `created_at` | `timestamptz` | |
+| `updated_at` | `timestamptz` | |
+
+#### `contact_dependents`
+
+Children or dependents linked to a contact (e.g., a parent's children).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` PK | |
+| `tenant_id` | `uuid` FK → tenants | |
+| `contact_id` | `uuid` FK → contacts | |
+| `name` | `text` | |
+| `date_of_birth` | `date` | Nullable |
+| `notes` | `text` | Nullable |
+| `created_at` | `timestamptz` | |
+| `updated_at` | `timestamptz` | |
+
+#### `contact_notes`
+
+Timestamped notes on a contact record.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` PK | |
+| `tenant_id` | `uuid` FK → tenants | |
+| `contact_id` | `uuid` FK → contacts | |
+| `team_member_id` | `uuid` FK → team_members | Nullable — author |
+| `session_id` | `uuid` FK → sessions | Nullable — links to a session |
+| `content` | `text` | |
+| `created_at` | `timestamptz` | |
+
+#### `team_members`
+
+Staff, tutors, practitioners, instructors — anyone who delivers services.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` PK | |
+| `tenant_id` | `uuid` FK → tenants | |
+| `profile_id` | `uuid` FK → profiles | Nullable — not all team members need login |
+| `name` | `text` | |
+| `email` | `text` | Nullable |
+| `phone` | `text` | Nullable |
+| `role_title` | `text` | Nullable, e.g., "Senior Tutor" |
+| `color` | `text` | Nullable, hex color for calendar display |
+| `created_at` | `timestamptz` | |
+| `updated_at` | `timestamptz` | |
+
+#### `team_availability`
+
+Weekly recurring availability for a team member.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` PK | |
+| `tenant_id` | `uuid` FK → tenants | |
+| `team_member_id` | `uuid` FK → team_members | |
+| `day_of_week` | `smallint` | 0 = Sunday, 6 = Saturday |
+| `start_time` | `time` | |
+| `end_time` | `time` | |
+
+#### `availability_overrides`
+
+Date-specific overrides (time off, extra hours).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` PK | |
+| `tenant_id` | `uuid` FK → tenants | |
+| `team_member_id` | `uuid` FK → team_members | |
+| `date` | `date` | |
+| `is_available` | `boolean` | `false` = blocked off |
+| `start_time` | `time` | Nullable |
+| `end_time` | `time` | Nullable |
+| `reason` | `text` | Nullable, e.g., "Medical appointment" |
+| `created_at` | `timestamptz` | |
+
+#### `services`
+
+Unified service definitions — classes, appointments, treatments, lessons.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` PK | |
+| `tenant_id` | `uuid` FK → tenants | |
+| `name` | `text` | e.g., "Sec 3 Math", "Swedish Massage" |
 | `description` | `text` | Nullable |
-| `default_price` | `numeric(10,2)` | Per-session price in SGD |
-| `color_code` | `text` | Hex color for calendar display |
-| `max_capacity` | `integer` | Default capacity for new classes |
-| `is_active` | `boolean` | Default `true` |
+| `type` | `text` | `recurring` or `bookable` |
+| `duration_minutes` | `integer` | Nullable |
+| `capacity` | `integer` | Nullable — max students/clients per session |
+| `price` | `numeric` | Nullable, in SGD |
+| `currency` | `text` | Default `SGD` |
+| `buffer_minutes` | `integer` | Default `0` — gap between appointments |
+| `color` | `text` | Nullable, hex color for calendar |
+| `active` | `boolean` | Default `true` |
+| `created_at` | `timestamptz` | |
+| `updated_at` | `timestamptz` | |
+
+#### `schedules`
+
+Recurring schedule definitions (RRULE-based). Does not store individual occurrences — those are materialized into `sessions`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` PK | |
+| `tenant_id` | `uuid` FK → tenants | |
+| `service_id` | `uuid` FK → services | |
+| `team_member_id` | `uuid` FK → team_members | |
+| `room_id` | `uuid` FK → rooms | Nullable |
+| `day_of_week` | `smallint` | 0 = Sunday, 6 = Saturday |
+| `start_time` | `time` | |
+| `end_time` | `time` | |
+| `rrule` | `text` | Nullable, RRULE string, e.g., `FREQ=WEEKLY;COUNT=12` |
+| `effective_from` | `date` | Start of recurrence window |
+| `effective_until` | `date` | Nullable — end of recurrence window |
+| `created_at` | `timestamptz` | |
+| `updated_at` | `timestamptz` | |
+
+#### `sessions`
+
+Individual occurrences (generated from schedules or created directly).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` PK | |
+| `tenant_id` | `uuid` FK → tenants | |
+| `service_id` | `uuid` FK → services | |
+| `schedule_id` | `uuid` FK → schedules | Nullable (null for ad-hoc sessions) |
+| `team_member_id` | `uuid` FK → team_members | |
+| `room_id` | `uuid` FK → rooms | Nullable |
+| `date` | `date` | |
+| `start_time` | `time` | |
+| `end_time` | `time` | |
+| `status` | `text` | `scheduled`, `cancelled`, `completed`, `no_show` |
+| `type` | `text` | `class` or `appointment` |
+| `created_at` | `timestamptz` | |
+| `updated_at` | `timestamptz` | |
+
+**Indexes:**
+- `(tenant_id, date)` — calendar queries
+- `(tenant_id, team_member_id, date)` — team member schedule
+- `(tenant_id, room_id, date, start_time, end_time)` — conflict detection
+
+#### `enrollments`
+
+Links contacts/dependents to sessions. Tracks attendance status.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` PK | |
+| `tenant_id` | `uuid` FK → tenants | |
+| `session_id` | `uuid` FK → sessions | |
+| `contact_id` | `uuid` FK → contacts | |
+| `dependent_id` | `uuid` FK → contact_dependents | Nullable |
+| `status` | `text` | `confirmed`, `attended`, `no_show`, `cancelled`, `makeup` |
+| `checked_in_at` | `timestamptz` | Nullable, set by QR scan or manual check-in |
+| `created_at` | `timestamptz` | |
+| `updated_at` | `timestamptz` | |
+
+**Index:** `(session_id, contact_id)` UNIQUE — no duplicate enrollments.
+
+#### `credit_ledger`
+
+Append-only ledger tracking credit movements. Balance = `SUM(amount)` for a contact.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` PK | |
+| `tenant_id` | `uuid` FK → tenants | |
+| `contact_id` | `uuid` FK → contacts | |
+| `amount` | `integer` | Positive = credit added, negative = credit consumed |
+| `reason` | `text` | `purchase`, `cancellation_refund`, `makeup_booking`, `admin_adjustment`, `expiry` |
+| `session_id` | `uuid` FK → sessions | Nullable |
+| `invoice_id` | `uuid` FK → invoices | Nullable |
+| `created_by` | `uuid` FK → profiles | Who performed the action |
 | `created_at` | `timestamptz` | |
 
 #### `rooms`
@@ -238,10 +494,11 @@ Physical rooms or spaces within a tenant's location.
 | `name` | `text` | e.g., "Room A", "Studio 1" |
 | `capacity` | `integer` | |
 | `is_active` | `boolean` | Default `true` |
+| `created_at` | `timestamptz` | |
 
 #### `holidays`
 
-Tenant-specific and national holidays. Used to exclude dates when generating class instances from recurring schedules.
+Tenant-specific and national holidays. Used to exclude dates when generating sessions from schedules.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -250,122 +507,36 @@ Tenant-specific and national holidays. Used to exclude dates when generating cla
 | `date` | `date` | |
 | `name` | `text` | e.g., "Chinese New Year Day 1" |
 | `is_national` | `boolean` | `true` for SG public holidays, `false` for tenant-specific closures |
+| `created_at` | `timestamptz` | |
 
 **Index:** `(tenant_id, date)` UNIQUE.
 
-#### `recurring_schedules`
-
-Defines a repeating class pattern. Does not store individual instances — those are materialized into `class_instances`.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | `uuid` PK | |
-| `course_id` | `uuid` FK → courses | |
-| `tenant_id` | `uuid` FK → tenants | Denormalized for RLS |
-| `day_of_week` | `smallint` | 0 = Sunday, 6 = Saturday |
-| `start_time` | `time` | |
-| `end_time` | `time` | |
-| `tutor_id` | `uuid` FK → profiles | Must have role `tutor` |
-| `room_id` | `uuid` FK → rooms | Nullable |
-| `recurrence_rule` | `text` | RRULE string, e.g., `FREQ=WEEKLY;COUNT=12` |
-| `effective_from` | `date` | Start of recurrence window |
-| `effective_until` | `date` | End of recurrence window |
-| `is_active` | `boolean` | Default `true` |
-| `created_at` | `timestamptz` | |
-
-#### `class_instances`
-
-A single occurrence of a class on a specific date. Materialized from recurring schedules or created ad-hoc. This is the core scheduling table.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | `uuid` PK | |
-| `recurring_schedule_id` | `uuid` FK → recurring_schedules | Nullable (null for ad-hoc classes) |
-| `course_id` | `uuid` FK → courses | |
-| `tenant_id` | `uuid` FK → tenants | |
-| `date` | `date` | |
-| `start_time` | `time` | |
-| `end_time` | `time` | |
-| `tutor_id` | `uuid` FK → profiles | |
-| `room_id` | `uuid` FK → rooms | Nullable |
-| `status` | `text` | `scheduled`, `cancelled`, `holiday` |
-| `max_capacity` | `integer` | Copied from course default, overridable |
-| `override_notes` | `text` | Reason for cancellation, room change, etc. |
-| `created_at` | `timestamptz` | |
-
-**Indexes:**
-- `(tenant_id, date)` — calendar queries
-- `(tenant_id, tutor_id, date)` — tutor schedule
-- `(tenant_id, room_id, date, start_time, end_time)` — conflict detection
-
-#### `enrollments`
-
-Links a student to a specific class instance. Tracks attendance status.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | `uuid` PK | |
-| `student_id` | `uuid` FK → students | |
-| `class_instance_id` | `uuid` FK → class_instances | |
-| `tenant_id` | `uuid` FK → tenants | Denormalized for RLS |
-| `status` | `text` | `confirmed`, `attended`, `no_show`, `cancelled`, `makeup` |
-| `checked_in_at` | `timestamptz` | Nullable, set by QR scan |
-| `cancelled_at` | `timestamptz` | Nullable |
-| `cancellation_reason` | `text` | Nullable |
-| `created_at` | `timestamptz` | |
-
-**Index:** `(student_id, class_instance_id)` UNIQUE — no duplicate enrollments.
-
-#### `credit_ledger`
-
-An append-only ledger tracking credit movements. Student balance = `SUM(amount)` for that student.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | `uuid` PK | |
-| `tenant_id` | `uuid` FK → tenants | |
-| `student_id` | `uuid` FK → students | |
-| `amount` | `integer` | Positive = credit added, negative = credit consumed |
-| `reason` | `text` | `purchase`, `cancellation_refund`, `makeup_booking`, `admin_adjustment`, `expiry` |
-| `class_instance_id` | `uuid` FK → class_instances | Nullable — links to the class that consumed/generated the credit |
-| `invoice_id` | `uuid` FK → invoices | Nullable — links to the invoice that purchased the credits |
-| `created_by` | `uuid` FK → profiles | Who performed the action |
-| `created_at` | `timestamptz` | |
-
-**Balance query:**
-```sql
-SELECT student_id, SUM(amount) AS balance
-FROM credit_ledger
-WHERE tenant_id = :tenant_id
-GROUP BY student_id;
-```
-
 #### `invoices`
 
-Monthly or on-demand invoices sent to parents.
+Monthly or on-demand invoices sent to contacts.
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | `uuid` PK | |
 | `tenant_id` | `uuid` FK → tenants | |
 | `invoice_number` | `text` | Sequential per tenant, e.g., `INV-2026-0042` |
-| `parent_id` | `uuid` FK → profiles | |
+| `contact_id` | `uuid` FK → contacts | |
 | `line_items` | `jsonb` | `[{ description, student_name, quantity, unit_price, amount }]` |
 | `subtotal` | `numeric(10,2)` | |
 | `gst_rate` | `numeric(4,2)` | e.g., `9.00` for 9% GST |
 | `gst_amount` | `numeric(10,2)` | |
 | `total` | `numeric(10,2)` | |
 | `status` | `text` | `draft`, `sent`, `paid`, `overdue`, `void` |
-| `due_date` | `date` | |
+| `due_date` | `date` | Nullable |
 | `paid_at` | `timestamptz` | Nullable |
 | `notes` | `text` | Nullable |
 | `created_at` | `timestamptz` | |
 
-**Index:** `(tenant_id, parent_id, status)`.
+**Index:** `(tenant_id, contact_id, status)`.
 
 #### `payments`
 
-Individual payment attempts against an invoice.
+Individual payment records against an invoice.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -375,7 +546,7 @@ Individual payment attempts against an invoice.
 | `method` | `text` | `paynow`, `stripe`, `cash`, `bank_transfer` |
 | `amount` | `numeric(10,2)` | |
 | `status` | `text` | `pending_verification`, `verified`, `rejected` |
-| `receipt_url` | `text` | Supabase Storage path for uploaded receipt screenshot |
+| `receipt_url` | `text` | Nullable — Supabase Storage path for uploaded receipt |
 | `stripe_payment_id` | `text` | Nullable — Stripe reference for automated payments |
 | `verified_by` | `uuid` FK → profiles | Nullable — admin who approved |
 | `verified_at` | `timestamptz` | Nullable |
@@ -391,10 +562,10 @@ In-app notification feed per user.
 | `id` | `uuid` PK | |
 | `tenant_id` | `uuid` FK → tenants | |
 | `user_id` | `uuid` FK → profiles | Recipient |
-| `type` | `text` | `class_cancelled`, `payment_received`, `invoice_sent`, `makeup_booked`, `schedule_changed` |
+| `type` | `text` | e.g., `class_cancelled`, `payment_received`, `invoice_sent`, `makeup_booked` |
 | `title` | `text` | Short heading |
 | `body` | `text` | Detail message |
-| `metadata` | `jsonb` | `{ class_instance_id, invoice_id, ... }` — for deep linking |
+| `metadata` | `jsonb` | `{ session_id, invoice_id, ... }` — for deep linking |
 | `read_at` | `timestamptz` | Nullable — null means unread |
 | `created_at` | `timestamptz` | |
 
@@ -402,7 +573,7 @@ In-app notification feed per user.
 
 #### `audit_log`
 
-Immutable log of all significant actions. Essential for compliance and debugging.
+Immutable log of all significant actions.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -410,13 +581,49 @@ Immutable log of all significant actions. Essential for compliance and debugging
 | `tenant_id` | `uuid` FK → tenants | |
 | `actor_id` | `uuid` FK → profiles | Who performed the action |
 | `action` | `text` | `create`, `update`, `delete`, `cancel`, `verify`, `login` |
-| `entity_type` | `text` | `class_instance`, `enrollment`, `invoice`, `payment`, etc. |
+| `entity_type` | `text` | `session`, `enrollment`, `invoice`, `payment`, etc. |
 | `entity_id` | `uuid` | ID of the affected record |
 | `changes` | `jsonb` | `{ field: { old: ..., new: ... } }` |
 | `ip_address` | `inet` | Nullable |
 | `created_at` | `timestamptz` | |
 
 **Index:** `(tenant_id, entity_type, entity_id)` — look up history for a specific record.
+
+#### `waitlist`
+
+Pre-launch registration for prospective businesses.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` PK | |
+| `business_name` | `text` | |
+| `contact_email` | `text` | |
+| `contact_phone` | `text` | |
+| `business_type` | `text` | `tuition`, `yoga`, `music`, `enrichment`, `other` |
+| `message` | `text` | Nullable |
+| `status` | `text` | `pending`, `approved`, `rejected` |
+| `reviewed_by` | `uuid` FK → profiles | Nullable |
+| `reviewed_at` | `timestamptz` | Nullable |
+| `tenant_id` | `uuid` FK → tenants | Nullable — set when approved and tenant is created |
+| `created_at` | `timestamptz` | |
+
+#### `invitations`
+
+Invite links for staff and clients to join a tenant.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` PK | |
+| `tenant_id` | `uuid` FK → tenants | |
+| `email` | `text` | |
+| `full_name` | `text` | |
+| `role` | `text` | `admin`, `staff`, or `client` |
+| `invited_by` | `uuid` FK → profiles | |
+| `token` | `text` | UUID v4 (cryptographically random) |
+| `status` | `text` | `pending`, `accepted`, `expired` |
+| `expires_at` | `timestamptz` | |
+| `accepted_at` | `timestamptz` | Nullable |
+| `created_at` | `timestamptz` | |
 
 ---
 
@@ -426,512 +633,230 @@ Immutable log of all significant actions. Essential for compliance and debugging
 
 | Role | Description |
 |---|---|
-| `super_admin` | Platform operator. Can manage tenants, impersonate users, view all data. |
-| `admin` | Tenant owner/manager. Full access to their tenant's data. |
-| `tutor` | Instructor. Can view their own schedule, mark attendance, see enrolled students. |
-| `parent` | Parent/guardian. Can view their children, book makeup classes, pay invoices. |
+| `super_admin` | Platform operator. Manages tenants, approves waitlist, views all data. |
+| `admin` | Tenant owner/manager. Full access to their tenant's enabled modules. |
+| `staff` | Instructor/practitioner. Views their own schedule, marks attendance, sees enrolled clients. |
+| `client` | End customer. Views their upcoming sessions, attendance history, and invoices. |
 
 ### Permission Matrix
 
-| Resource | super_admin | admin | tutor | parent |
+| Resource | super_admin | admin | staff | client |
 |---|---|---|---|---|
-| Tenants | CRUD | Read own | - | - |
-| Profiles (own tenant) | CRUD | CRUD | Read own | Read own |
-| Students | CRUD | CRUD | Read (enrolled) | Read own children |
-| Courses | CRUD | CRUD | Read | Read |
-| Recurring Schedules | CRUD | CRUD | Read own | - |
-| Class Instances | CRUD | CRUD | Read/Update own | Read enrolled |
-| Enrollments | CRUD | CRUD | Read/Update own classes | Create/Cancel own |
-| Credit Ledger | CRUD | CRUD | Read | Read own |
-| Invoices | CRUD | CRUD | - | Read own |
-| Payments | CRUD | CRUD | - | Create, Read own |
-| Notifications | CRUD | CRUD | Read own | Read own |
-| Audit Log | Read all | Read own tenant | - | - |
-| Rooms | CRUD | CRUD | Read | - |
-| Holidays | CRUD | CRUD | Read | Read |
+| Platform (waitlist, tenants) | Full access | — | — | — |
+| All enabled modules | Full access | Full access | — | — |
+| Dashboard | Yes | Yes | Own stats | Own stats |
+| Calendar | Yes | Yes | Own sessions | Enrolled sessions |
+| Clients | Yes | Yes | Read | — |
+| Services | Yes | Yes | Read | — |
+| Team | Yes | Yes | Limited | — |
+| Rooms | Yes | Yes | Read | — |
+| Invoicing | Yes | Yes | — | View own |
+| Settings | Yes | Yes | — | — |
 
-### RLS Policy Examples
+### Module Visibility by Role
 
-**Tenant isolation (applied to every table):**
+| Role | Sidebar Modules |
+|---|---|
+| `super_admin` | Platform navigation (Dashboard, Tenants, Waitlist, Settings) |
+| `admin` | All enabled tenant modules |
+| `staff` | Dashboard, Calendar, Clients, Team |
+| `client` | Dashboard, Calendar, Invoicing |
 
-```sql
-CREATE POLICY "tenant_isolation" ON class_instances
-  USING (
-    tenant_id = (
-      SELECT tenant_id FROM profiles
-      WHERE user_id = auth.uid()
-    )
-  );
-```
+### RLS Policy Structure
 
-**Tutor sees only their assigned classes:**
+Every table has tenant isolation enforced at the database level via two helper functions:
 
 ```sql
-CREATE POLICY "tutor_own_classes" ON class_instances
-  FOR SELECT
-  USING (
-    tutor_id = (
-      SELECT id FROM profiles
-      WHERE user_id = auth.uid() AND role = 'tutor'
-    )
-  );
+-- Returns all tenant IDs the current user belongs to
+get_user_tenant_ids() → uuid[]
+
+-- Returns the user's role within a specific tenant
+get_user_role(tenant_id uuid) → text
 ```
 
-**Parent sees only their children's enrollments:**
-
-```sql
-CREATE POLICY "parent_own_enrollments" ON enrollments
-  FOR SELECT
-  USING (
-    student_id IN (
-      SELECT id FROM students
-      WHERE parent_id = (
-        SELECT id FROM profiles
-        WHERE user_id = auth.uid() AND role = 'parent'
-      )
-    )
-  );
-```
-
-**Parent can cancel enrollments (with time constraint enforced in application):**
-
-```sql
-CREATE POLICY "parent_cancel_enrollment" ON enrollments
-  FOR UPDATE
-  USING (
-    student_id IN (
-      SELECT id FROM students
-      WHERE parent_id = (
-        SELECT id FROM profiles WHERE user_id = auth.uid()
-      )
-    )
-  )
-  WITH CHECK (
-    status IN ('cancelled')
-  );
-```
+**RLS categories (48+ policies across 12 tables):**
+- **Tenant isolation** — applied to every table via `tenant_id IN (get_user_tenant_ids())`
+- **Role-based access** — different SELECT/INSERT/UPDATE/DELETE policies per role
+- **Anonymous access** — `anon` policies on services, team_members, team_availability, availability_overrides, and sessions for the public booking page
 
 ---
 
 ## Feature Specification
 
-### Phase 1: Admin Command Center
-
-**Target:** Desktop-first admin interface. The operational backbone of the system.
+### Implemented Features
 
 #### Master Calendar
 
-- **Views:** Week, month, day — switchable via tabs
-- **Display:** Classes color-coded by course, showing tutor name and enrollment count (e.g., "5/8")
-- **Drag-and-drop:** Admin drags a class to a new time slot. System checks for conflicts before confirming
-- **Click to open:** Clicking a class opens a detail panel showing enrolled students, attendance status, and quick actions (cancel, reassign tutor, change room)
-- **Holiday overlay:** Public holidays and tenant closures are grayed out with a label
+- **Views:** Day, week, month — switchable via tabs
+- **Display:** Sessions color-coded by service or team member (toggle in calendar store)
+- **Drag-and-drop:** Admin drags a session to a new time slot. System checks for tutor/room conflicts before confirming. Reverts on conflict.
+- **Click to open:** Clicking a session opens a detail panel showing enrolled contacts, attendance status, and quick actions
+- **Holiday overlay:** Public holidays and tenant closures are grayed out
+- **Enrollment form:** Inline form to add/remove enrollments with bulk check-in
+- **Conflict detection:** Queries sessions for tutor and room overlap before allowing reschedule or creation
 
-**Conflict detection algorithm:**
+#### Client Management
 
-```
-When moving/creating a class instance:
-1. Query class_instances WHERE tenant_id = :tid AND date = :date
-   AND status = 'scheduled'
-2. For the target tutor: check no overlap in (start_time, end_time)
-3. For the target room: check no overlap in (start_time, end_time)
-4. If conflict found → return { conflict_type, conflicting_class } → show modal asking admin to resolve
-5. If clear → update and broadcast via Realtime
-```
+- Searchable, filterable list of all contacts in the tenant
+- Each contact shows: name, email, phone, tags, dependents
+- Dependent management: add/edit children or sub-contacts
+- Contact notes: timestamped notes linked to team members and sessions
+- Tags for categorization (e.g., "parent", "vip")
 
-#### Student CRM
+#### Service Management
 
-- Searchable, filterable list of all students in the tenant
-- Filters: course, level, status (active/inactive), outstanding balance
-- Each student card shows: name, parent, enrolled courses, credit balance, last attendance
-- WhatsApp deep link: click the phone icon → opens `https://wa.me/6591234567?text=Hi%20Mrs%20Tan%2C%20regarding%20[Student]...`
-- Enrollment history: timeline view of all past and upcoming classes
+- Unified service list with type column (`recurring` or `bookable`)
+- Service form: name, description, type, duration, capacity, price, color, buffer minutes
+- Color picker for calendar display
 
-#### Tutor Management
+#### Team Management
 
-- List of tutors with their assigned courses and weekly hours
-- Availability grid: tutors set their available time slots; admin sees at a glance who's free
-- Payroll summary: total hours taught per period (calculated from attended class instances)
+- Team member list with role titles and colors
+- Availability grid: weekly recurring time slots per team member
+- Availability overrides: date-specific blocks with reasons
+- Invite workflow: send email invitations for new staff/admins
 
 #### Room Management
 
 - Room list with capacity
-- Utilization view: which rooms are in use at any given time
-- Conflict detection shared with the calendar (no double-booking)
+- Used in schedule/session assignment for conflict detection
 
 #### Recurring Schedule Engine
 
-- Admin defines: course + day of week + time + tutor + room + recurrence rule (e.g., "Every Tuesday for 12 weeks starting 2026-03-03")
-- System parses the RRULE and generates `class_instances` in bulk
+- Admin defines: service + day of week + time + team member + room + RRULE
+- System parses the RRULE and generates `sessions` in bulk
 - Holiday exclusion: cross-references the `holidays` table and skips those dates
-- Generated instances can be individually edited or cancelled without affecting the recurring rule
-- Regeneration: if the rule changes, admin can choose to regenerate future instances (past instances are preserved)
+- Generated sessions can be individually edited or cancelled without affecting the schedule
+- RRULE parsing utilities in `@plio/utils`
 
-### Phase 2: Parent Portal
+#### Public Booking
 
-**Target:** Mobile-first PWA. Parents use this on their phones.
+Any tenant with the booking module enabled gets a public page at `/book/[slug]`.
 
-#### Dashboard
+1. **Service Picker** — Lists active bookable services with name, duration, and price
+2. **Team Member Selection** — Choose a specific team member or "Any Available"
+3. **Date & Slot Picker** — Shows available time slots based on team availability, existing sessions, and room capacity. Factors in `team_availability`, `availability_overrides`, `holidays`, and `buffer_minutes`
+4. **Contact Form** — Name, phone, email. Existing contacts matched by phone; new contacts created automatically
+5. **Confirmation** — Session created, confirmation displayed
 
-- **Next class** card: course name, date, time, tutor, room — prominent at the top
-- **Credit balance** card: current credits per student
-- **Outstanding fees** card: unpaid invoice total with a "Pay Now" CTA
-- **Recent activity** feed: last 5 notifications
+The booking page uses the admin Supabase client (service role) since visitors are unauthenticated. Tenant branding (logo, accent color, business name) is applied to the booking page.
 
-#### QR Check-in
+#### Invoicing
 
-- Parent opens the app at the center → taps "Check In"
-- App displays a QR code containing a signed token: `{ student_id, class_instance_id, timestamp }`
-- Admin/tutor scans with their device (or a tablet at the front desk)
-- System validates the token, marks `enrollments.checked_in_at`, updates attendance status to `attended`
-- Fallback: admin can manually mark attendance from the class detail panel
-
-#### Makeup Class Booking
-
-This is the signature feature — the flow that demonstrates complex business logic.
-
-**Cancellation flow:**
-1. Parent views upcoming enrolled classes
-2. Taps "Cancel" on a future class
-3. System checks: is the class more than `tenant.settings.cancellation_hours` (default 24) hours away?
-4. If **yes**: enrollment status → `cancelled`, one credit is added to `credit_ledger` with reason `cancellation_refund`
-5. If **no**: show warning "Cancellation window has passed. No credit will be refunded." Parent can still cancel but gets no credit
-6. Notification sent to admin
-
-**Makeup booking flow:**
-1. Parent taps "Book Makeup"
-2. System shows available classes: `class_instances WHERE status = 'scheduled' AND date > now()` filtered to classes where `current_enrollment < max_capacity` and matching the same course (or any course, depending on tenant settings)
-3. Parent selects a slot → enrollment created with status `makeup`, one credit deducted from `credit_ledger`
-4. Notification sent to admin
-5. If no credits available → show "Purchase more credits or contact the center"
-
-#### Attendance History
-
-- Per-student timeline: date, class, status (attended / no-show / cancelled / makeup)
-- Summary stats: attendance rate, cancellation rate
-- Filterable by date range and course
-
-### Phase 3: Payments
-
-#### Invoice Generation
-
-- **Manual:** Admin generates an invoice for a specific parent
-- **Batch:** Admin triggers "Generate Monthly Invoices" → system creates invoices for all parents with attended sessions in the billing period
-- Line items auto-populated from enrollment data: `{ student_name, course_title, sessions_attended, unit_price, amount }`
-- GST calculated based on `tenant.settings.gst_registered` and `tenant.settings.gst_rate`
+- Invoice list with status badges (draft, sent, paid, overdue, void)
+- Create invoice: select contact, add line items (description, student name, quantity, unit price)
+- GST auto-calculated if tenant is GST-registered
 - Invoice number auto-incremented per tenant: `INV-2026-0042`
-- Email notification sent via Resend with invoice details
+- Record payments manually (PayNow, cash, bank transfer)
+- Payment status: pending_verification → verified / rejected
 
-#### PayNow QR
+#### Parent Portal
 
-- Parent views outstanding invoice → taps "Pay with PayNow"
-- System generates a dynamic PayNow QR via Stripe PayNow integration (in test mode for portfolio)
-- Alternatively: display a static PayNow QR for the tenant's registered UEN with the invoice amount pre-filled
-- After payment, Stripe webhook updates payment status → marks invoice as `paid`
+Mobile-oriented portal for parents/clients:
 
-#### Receipt Upload & Verification
+- **Dashboard:** Next class card, credit balance per child, upcoming sessions
+- **Schedule:** View enrolled sessions with attendance history
+- **Attendance:** Per-child timeline showing attended, no-show, cancelled, makeup status with rates
+- **Makeup Booking:** Browse available slots, book with credit deduction
+- **Fees:** View invoices with payment status
+- **QR Check-in:** Generate signed tokens for scan-based attendance
 
-For manual bank transfers (common in Singapore):
+#### Tutor Portal
 
-1. Parent taps "I've Paid" → uploads a screenshot of their banking app transfer confirmation
-2. Image stored in Supabase Storage under `receipts/{tenant_id}/{invoice_id}/`
-3. Payment record created with status `pending_verification`
-4. Admin sees the payment in a "Pending Approvals" queue
-5. Admin views the receipt image alongside the invoice details
-6. Admin taps "Verify" (updates status to `verified`, marks invoice as `paid`) or "Reject" with a reason
-7. Notification sent to parent either way
+- **Schedule:** View assigned sessions for the day/week
+- **Attendance:** Mark individual students as attended or no_show
+- **QR Scanner:** Manual token entry for check-in (camera scanning planned)
 
-#### Payment History
+#### Settings
 
-- Parent view: list of all invoices with status badges (paid, pending, overdue)
-- Admin view: full payment ledger with filters (date range, status, method, parent)
+- **Branding tab:** Business name, accent color picker, logo URL
+- **Modules tab:** Toggle modules on/off, rename titles inline, drag-and-drop reorder, calendar-specific config (recurring/appointment mode toggles)
 
-### Phase 4: Notifications & Communication
+#### Platform Admin (Super Admin)
 
-#### In-App Notifications
+- **Dashboard:** Platform-wide KPIs (total tenants, total users, pending waitlist)
+- **Tenants page:** List all tenants with user counts, toggle active status, view tenant details via slide-over panel
+- **Waitlist page:** Review applications, approve (auto-provisions tenant + sends invite email) or reject with confirmation dialogs
+- **Platform Settings:** System module management
 
-- Bell icon in the header with unread count badge
-- Dropdown panel showing recent notifications
-- Powered by Supabase Realtime — notifications appear instantly without page refresh
-- Clicking a notification deep-links to the relevant screen (e.g., class detail, invoice)
+#### Onboarding Wizard
 
-**Notification triggers:**
+Multi-step flow at `/onboarding` for newly approved businesses:
 
-| Event | Recipients | Channel |
-|---|---|---|
-| Class cancelled | Enrolled parents | In-app, Email |
-| Schedule changed (time/tutor/room) | Enrolled parents | In-app, Email |
-| Makeup class booked | Admin | In-app |
-| Invoice generated | Parent | In-app, Email |
-| Payment received | Admin | In-app |
-| Payment verified | Parent | In-app, Email |
-| Payment rejected | Parent | In-app, Email |
-| Credit balance low | Parent | In-app |
+1. **Choose Path** — Template-based or custom setup
+2. **Template Picker** — Select from 5 industry presets
+3. **Module Customizer** — Toggle modules, rename titles, reorder sidebar
+4. **Branding** — Upload logo, set business name, choose accent color
+5. **Done** — Redirect to `/dashboard`
 
-#### Email Notifications
+#### Registration & Waitlist
 
-- Built with React Email for consistent, branded templates
-- Sent via Resend API
-- Templates: invoice sent, payment confirmation, class cancellation, welcome email
-- Each email includes an unsubscribe link (PDPA compliance)
+- Public registration at `/register` — business submits name, email, phone, type, message
+- Creates a `waitlist` entry (status: pending)
+- Super admin reviews and approves → system creates tenant, seeds modules, creates admin profile, sends invite email
 
-#### WhatsApp Integration
+#### Invitation Flow
 
-- Deep links via `wa.me/{phone}?text={encoded_message}` — no API needed
-- Pre-filled message templates for common scenarios:
-  - "Hi {parent_name}, a reminder that {student_name} has {course} tomorrow at {time}."
-  - "Hi {parent_name}, we noticed {student_name} was absent from {course} today. Is everything okay?"
-- Future: WhatsApp Business API for automated messaging
+- Admin sends invite from `/team` → creates `invitation` row with signed token
+- User receives email with link to `/invite/[token]`
+- Token validated (expiry, already-used), user sets password
+- Supabase Auth user created, profile linked to tenant, invitation marked accepted
 
-### Phase 5: Analytics & Reporting
+### Planned Features (Not Yet Implemented)
 
-#### Dashboards (Admin)
-
-- **Occupancy rate:** per class, per course, per day of week — bar charts and heatmaps
-- **Revenue:** monthly revenue trend, breakdown by course, outstanding vs collected
-- **Student retention:** new enrollments vs churned students per month
-- **Tutor utilization:** hours taught vs available hours per tutor
-
-#### Export
-
-- CSV export for any data table (students, invoices, attendance)
-- PDF generation for invoices and attendance reports (using `@react-pdf/renderer`)
-
-### Phase 6: Future Vision
-
-Features documented for future development. Not in initial scope but the schema supports them.
-
-- **Multi-location support:** Add a `location_id` to `rooms` and `class_instances`; tenants can manage multiple branches
-- **Waitlist system:** When a class is full, parents can join a waitlist; auto-promoted when a spot opens
-- **Referral program:** Parent-to-parent referral codes that grant bonus credits
-- **AI schedule optimization:** Suggest optimal class times based on enrollment patterns and tutor availability
-- **Mobile app:** React Native / Expo, sharing the same Supabase backend
-- **White-label theming:** Per-tenant color schemes, logos, and custom domains
+- **Real-time notifications** — Bell icon, Supabase Realtime subscriptions, notification feed (table exists, no UI)
+- **Audit logging** — Write to audit_log on CRUD operations (table exists, not instrumented)
+- **Payment gateway** — Stripe/PayNow integration (manual recording works today)
+- **Service worker / PWA** — Offline caching, install prompt (manifest exists, no service worker)
+- **Logo file upload** — Supabase Storage integration (currently URL paste)
+- **Booking confirmation email** — Email sent after public booking
+- **Analytics & reporting** — Occupancy, revenue, retention dashboards
+- **Multi-location support** — Multiple branches per tenant
+- **AI schedule optimization** — Smart scheduling suggestions
+- **Mobile app** — React Native / Expo
 
 ---
 
-## API Contracts
+## State Management
 
-All mutations are implemented as Next.js Server Actions. Types are generated from the Supabase schema via `supabase gen types`.
-
-### Schedule
+### Zustand Stores
 
 ```typescript
-// Create a recurring schedule and generate class instances
-async function createRecurringSchedule(input: {
-  courseId: string;
-  dayOfWeek: number;          // 0-6
-  startTime: string;          // "14:00"
-  endTime: string;            // "16:00"
-  tutorId: string;
-  roomId?: string;
-  recurrenceRule: string;     // "FREQ=WEEKLY;COUNT=12"
-  effectiveFrom: string;      // "2026-03-03"
-  effectiveUntil: string;     // "2026-05-26"
-}): Promise<{
-  schedule: RecurringSchedule;
-  instances: ClassInstance[];  // generated instances
-  skippedDates: string[];     // dates skipped due to holidays
-}>
-
-// Reschedule a single class instance (drag-and-drop)
-async function rescheduleClassInstance(input: {
-  classInstanceId: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  tutorId?: string;           // optional tutor change
-  roomId?: string;            // optional room change
-}): Promise<{
-  instance: ClassInstance;
-  conflicts: Conflict[];      // empty if successful
-}>
-
-// Cancel a class instance
-async function cancelClassInstance(input: {
-  classInstanceId: string;
-  reason: string;
-  refundCredits: boolean;     // refund enrolled students
-}): Promise<{
-  instance: ClassInstance;
-  refundedStudents: number;
-  notificationsSent: number;
-}>
-```
-
-### Enrollment
-
-```typescript
-// Enroll a student in a class
-async function enrollStudent(input: {
-  studentId: string;
-  classInstanceId: string;
-}): Promise<{
-  enrollment: Enrollment;
-  currentEnrollment: number;  // updated count
-  maxCapacity: number;
-}>
-
-// Cancel enrollment (parent or admin)
-async function cancelEnrollment(input: {
-  enrollmentId: string;
-  reason?: string;
-}): Promise<{
-  enrollment: Enrollment;
-  creditRefunded: boolean;
-  creditBalance: number;      // updated balance
-}>
-
-// Book a makeup class
-async function bookMakeup(input: {
-  studentId: string;
-  classInstanceId: string;    // target class
-}): Promise<{
-  enrollment: Enrollment;
-  creditBalance: number;      // after deduction
-}>
-
-// Get available makeup slots
-async function getAvailableMakeupSlots(input: {
-  studentId: string;
-  courseId?: string;           // filter by same course
-  dateFrom: string;
-  dateTo: string;
-}): Promise<{
-  slots: Array<{
-    classInstance: ClassInstance;
-    currentEnrollment: number;
-    availableSpots: number;
-  }>;
-}>
-```
-
-### Credits
-
-```typescript
-// Admin adjusts a student's credit balance
-async function adjustCredits(input: {
-  studentId: string;
-  amount: number;             // positive or negative
-  reason: string;
-}): Promise<{
-  ledgerEntry: CreditLedger;
-  newBalance: number;
-}>
-
-// Get credit balance and transaction history
-async function getCreditHistory(input: {
-  studentId: string;
-  limit?: number;
-  offset?: number;
-}): Promise<{
-  balance: number;
-  transactions: CreditLedger[];
-  total: number;
-}>
-```
-
-### Invoices & Payments
-
-```typescript
-// Generate monthly invoices in batch
-async function generateMonthlyInvoices(input: {
-  billingMonth: string;       // "2026-03"
-}): Promise<{
-  invoicesCreated: number;
-  invoices: Invoice[];
-  errors: Array<{ parentId: string; error: string }>;
-}>
-
-// Record a payment (parent uploads receipt)
-async function submitPayment(input: {
-  invoiceId: string;
-  method: 'paynow' | 'bank_transfer' | 'cash';
-  amount: number;
-  receiptFile?: File;         // uploaded screenshot
-}): Promise<{
-  payment: Payment;
-}>
-
-// Admin verifies a payment
-async function verifyPayment(input: {
-  paymentId: string;
-  action: 'verify' | 'reject';
-  reason?: string;            // required for rejection
-}): Promise<{
-  payment: Payment;
-  invoice: Invoice;           // updated status
-}>
-```
-
----
-
-## State Management Patterns
-
-### Zustand Store Structure
-
-```typescript
-// stores/calendar.ts — Calendar UI state
+// stores/calendar-store.ts — Calendar UI state
 interface CalendarStore {
-  view: 'week' | 'month' | 'day';
+  view: 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay';
   currentDate: Date;
-  selectedInstance: ClassInstance | null;
+  selectedSessionId: string | null;
+  colorBy: 'service' | 'team_member';
+  filters: { teamMemberId?: string; serviceId?: string; roomId?: string };
   isDetailPanelOpen: boolean;
-
-  setView: (view: CalendarStore['view']) => void;
-  navigateDate: (direction: 'prev' | 'next' | 'today') => void;
-  selectInstance: (instance: ClassInstance | null) => void;
+  selectedInstance: Record<string, unknown> | null;
 }
 
-// stores/notifications.ts — Notification state with Realtime
+// stores/module-store.ts — Module configuration
+interface ModuleStore {
+  modules: TenantModuleWithModule[];
+  isModuleEnabled: (slug: string) => boolean;
+  getModuleTitle: (slug: string) => string;
+}
+
+// stores/tenant-store.ts — Tenant settings
+interface TenantStore {
+  tenantId: string | null;
+  settings: TenantSettings; // logo_url, accent_color, business_name
+}
+
+// stores/notification-store.ts — Notification state (stub)
 interface NotificationStore {
-  notifications: Notification[];
   unreadCount: number;
-
-  addNotification: (n: Notification) => void;
-  markAsRead: (id: string) => void;
-  markAllAsRead: () => void;
+  setUnreadCount: (count: number) => void;
 }
-```
 
-### Optimistic Updates for Calendar Drag
-
-```typescript
-// When admin drags a class to a new time:
-1. Immediately update the local FullCalendar state (optimistic)
-2. Fire the `rescheduleClassInstance` server action
-3. If successful → Supabase Realtime broadcasts the change to other clients
-4. If conflict detected → revert local state, show conflict modal
-```
-
-### Realtime Subscription Pattern
-
-```typescript
-// In a layout or provider component:
-useEffect(() => {
-  const channel = supabase
-    .channel(`tenant:${tenantId}`)
-    .on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'class_instances',
-      filter: `tenant_id=eq.${tenantId}`,
-    }, (payload) => {
-      // Invalidate React Query cache or update Zustand store
-      queryClient.invalidateQueries(['class-instances']);
-    })
-    .on('postgres_changes', {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'notifications',
-      filter: `user_id=eq.${userId}`,
-    }, (payload) => {
-      notificationStore.addNotification(payload.new);
-    })
-    .subscribe();
-
-  return () => { supabase.removeChannel(channel); };
-}, [tenantId, userId]);
+// stores/parent-store.ts — Parent portal state
+interface ParentStore {
+  selectedStudentId: string | null;
+  students: Array<{ id: string; fullName: string }>;
+}
 ```
 
 ---
@@ -942,71 +867,38 @@ useEffect(() => {
 
 | Token | Value | Usage |
 |---|---|---|
-| `--background` | `#ffffff` | Main content area |
-| `--foreground` | `#0f172a` | Primary text (Slate 900) |
 | `--primary` | `#6366f1` | Buttons, active states (Indigo 500) |
-| `--primary-foreground` | `#ffffff` | Text on primary |
+| `--foreground` | `#0f172a` | Primary text (Slate 900) |
 | `--secondary` | `#f1f5f9` | Secondary backgrounds (Slate 100) |
-| `--muted` | `#94a3b8` | Placeholder text (Slate 400) |
 | `--destructive` | `#ef4444` | Delete, cancel, error (Red 500) |
 | `--success` | `#22c55e` | Paid, confirmed (Green 500) |
 | `--warning` | `#f59e0b` | Pending, overdue (Amber 500) |
 | `--sidebar` | `#0f172a` | Sidebar background (Slate 900) |
 | `--sidebar-foreground` | `#e2e8f0` | Sidebar text (Slate 200) |
 
-### Typography
-
-- **Font:** Inter (Google Fonts)
-- **Headings:** `font-semibold`, sizes via Tailwind (`text-2xl`, `text-xl`, `text-lg`)
-- **Body:** `text-sm` (14px) for data-dense admin views, `text-base` (16px) for parent portal
-- **Monospace:** `font-mono` for invoice numbers, credit amounts
+Tenant accent color overrides the primary color in client-facing views (booking page, client portal). Admin views use the standard indigo palette.
 
 ### Component Library
 
-Built on Shadcn UI. Key components:
+Built on Shadcn UI (New York style). 24+ components including:
 
-- **DataTable** — sortable, filterable tables for student lists, invoices, payments
+- **DataTable** — sortable, filterable tables for contact lists, invoices, payments
 - **Calendar** — FullCalendar wrapped in a Shadcn-styled container
-- **Command** — command palette (Cmd+K) for quick navigation (search students, jump to class)
-- **Sheet** — slide-over panels for class details, student profiles
-- **Dialog** — confirmation modals (cancel class, verify payment)
-- **Toast** — success/error notifications
+- **Sheet** — slide-over panels for session details, contact profiles, tenant editing
+- **Dialog** — confirmation modals (cancel session, verify payment, approve waitlist)
+- **Command** — combobox-based selection (contacts, team members)
+- **Toast** — success/error notifications via Sonner
 - **Badge** — status indicators (paid, pending, overdue, cancelled)
+- **Form** — React Hook Form + Zod integration
+- **Tabs** — view switching in settings, calendar views
 
 ### Responsive Strategy
 
 | Viewport | Target User | Layout |
 |---|---|---|
-| Desktop (1024px+) | Admin, Tutor | Sidebar navigation, multi-column layouts, full calendar |
+| Desktop (1024px+) | Admin, Staff | Sidebar navigation, multi-column layouts, full calendar |
 | Tablet (768px–1023px) | Admin (on the go) | Collapsible sidebar, stacked layouts |
-| Mobile (< 768px) | Parent | Bottom navigation bar, single-column, card-based UI |
-
-### Mobile (Parent Portal) Navigation
-
-```
-┌──────────────────────────┐
-│                          │
-│      [Main Content]      │
-│                          │
-├──────────────────────────┤
-│  🏠    📅    💳    👤   │
-│ Home  Schedule Fees Profile│
-└──────────────────────────┘
-```
-
-- Bottom nav bar fixed at the bottom (PWA-style)
-- Disable pinch-to-zoom for native app feel: `<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">`
-- Add to home screen manifest for PWA
-
-### Key Screen Descriptions
-
-**Admin — Calendar View:** Full-width calendar taking up ~80% of the screen. Sidebar with upcoming classes list. Top bar with date navigation and view switcher. Clicking a class opens a right-side sheet with details.
-
-**Admin — Student CRM:** DataTable with columns: Name, Parent, Courses, Credits, Last Attendance, Status. Search bar and filter pills at the top. Clicking a row opens a detail sheet with full history.
-
-**Parent — Dashboard:** Stack of cards: Next Class (blue accent), Credit Balance (green), Outstanding Fees (amber if unpaid). Below: recent activity feed. Clean, minimal, fast.
-
-**Parent — Makeup Booking:** Step wizard: 1) Select student → 2) View available slots (list of cards with date, time, spots remaining) → 3) Confirm booking.
+| Mobile (< 768px) | Client/Parent | Card-based UI, simplified views |
 
 ---
 
@@ -1015,227 +907,93 @@ Built on Shadcn UI. Key components:
 ### PDPA Compliance (Singapore Personal Data Protection Act)
 
 - **Data minimization:** Only collect data necessary for service delivery
-- **NRIC masking:** NRICs stored as masked values (`T****567A`), never in full. The masking happens client-side before submission
-- **Consent:** Signup flow includes explicit consent checkbox for data collection and usage
-- **Access requests:** Admin can export all data for a specific parent (data subject access request)
-- **Data deletion:** Admin can anonymize a profile (replace PII with placeholders) while preserving aggregate data for reporting
-- **Unsubscribe:** Every email includes an unsubscribe link
+- **NRIC masking:** NRICs stored as masked values (`T****567A`), never in full
+- **Unsubscribe:** Every email should include an unsubscribe link
 
 ### Row-Level Security
 
 - RLS is enabled on every table with data
 - Every query goes through Supabase client with the user's JWT — the database enforces access, not the application code
 - Defense in depth: even if application logic has a bug, RLS prevents data leaks
-- RLS policies are tested in integration tests (see Testing Strategy)
+- 48+ RLS policies across 12 tables, plus base policies for core tables
 
-### Input Sanitization
+### Input Validation
 
 - All user inputs validated with Zod schemas before reaching the database
 - Server Actions validate inputs server-side regardless of client-side validation
-- File uploads restricted to image types (JPEG, PNG) with a 5MB size limit
-- Filenames sanitized before storage
 
-### Rate Limiting
+### Auth Security
 
 - Supabase Auth has built-in rate limiting for login attempts
-- Server Actions implement rate limiting via Vercel Edge Middleware for sensitive operations (payment submission, invoice generation)
-
-### CORS Configuration
-
-- Supabase project configured to accept requests only from the Vercel deployment domain
-- No wildcard origins in production
-
-### Audit Logging
-
-- All create, update, delete operations on sensitive tables write to `audit_log`
-- Logs include: actor, action, entity, changes (before/after), timestamp, IP address
-- Audit log is append-only — no UPDATE or DELETE policies
-- Retained for 12 months minimum
+- Invite tokens are UUID v4 (cryptographically random) with expiry
+- Service role key is server-only (`lib/supabase/admin.ts`) — never exposed to client
+- Middleware refreshes auth tokens on every request
 
 ---
 
-## Testing Strategy
+## Testing
 
 ### Unit Tests (Vitest)
 
-Focus on pure business logic:
+74 tests in `packages/utils/` covering pure business logic:
 
 - **Scheduling logic:** RRULE parsing, holiday exclusion, instance generation
-- **Credit calculations:** balance computation, refund eligibility, ledger operations
-- **Conflict detection:** time overlap algorithm, tutor/room availability
+- **Credit calculations:** balance computation, refund eligibility
+- **Conflict detection:** time overlap algorithm
 - **GST calculation:** subtotal → GST amount → total
-- **Invoice line item generation:** from enrollment data to line items
+- **Date helpers:** Singapore timezone handling
 
-```typescript
-// Example: credit refund eligibility
-describe('cancelEnrollment', () => {
-  it('refunds credit when cancelled > 24h before class', () => {
-    const classTime = new Date('2026-03-10T14:00:00+08:00');
-    const cancelTime = new Date('2026-03-09T10:00:00+08:00');
-    const result = calculateRefundEligibility(classTime, cancelTime, 24);
-    expect(result.eligible).toBe(true);
-  });
+### Manual Testing Playbook
 
-  it('does not refund when cancelled < 24h before class', () => {
-    const classTime = new Date('2026-03-10T14:00:00+08:00');
-    const cancelTime = new Date('2026-03-10T08:00:00+08:00');
-    const result = calculateRefundEligibility(classTime, cancelTime, 24);
-    expect(result.eligible).toBe(false);
-  });
-});
-```
+Documented in `docs/testing-playbook.md` with:
 
-### Integration Tests (RLS Policies)
-
-Test that RLS policies correctly enforce access control:
-
-```typescript
-// Test that a parent cannot see another parent's students
-describe('RLS: students table', () => {
-  it('parent can only see own children', async () => {
-    const parentClient = createClient(parentAJwt);
-    const { data } = await parentClient.from('students').select('*');
-    expect(data.every(s => s.parent_id === parentAProfileId)).toBe(true);
-  });
-
-  it('parent cannot see other tenants data', async () => {
-    const parentClient = createClient(tenantAParentJwt);
-    const { data } = await parentClient
-      .from('students')
-      .select('*')
-      .eq('tenant_id', tenantBId);
-    expect(data).toHaveLength(0);
-  });
-});
-```
-
-### E2E Tests (Playwright)
-
-Critical user flows tested end-to-end:
-
-1. **Admin creates a recurring schedule** → verify class instances appear on the calendar
-2. **Parent cancels and rebooks a makeup class** → verify credit ledger updates correctly
-3. **Parent uploads a payment receipt** → admin verifies → invoice status updates to paid
-4. **Tutor marks attendance** → enrollment status updates, parent sees it on their dashboard
-5. **Multi-tenant isolation** → log in as tenant A, verify tenant B's data is invisible
-
-### Test Data Seeding
-
-- `supabase/seed.sql` creates two demo tenants with realistic Singapore data:
-  - **Bright Tuition Centre:** 3 tutors, 8 courses (Math, Science, English by level), 20 students, 3 rooms
-  - **Zen Flow Yoga Studio:** 2 instructors, 4 class types (Vinyasa, Yin, Hot, Prenatal), 15 students, 2 studios
-- Seed data includes past enrollments, completed invoices, and credit history for a realistic demo
+- 5 test accounts across 2 tenants (Bright Learning Hub, Zen Yoga Studio)
+- 10 test scenarios covering all roles and access patterns
+- Route access matrix for all role × route combinations
+- Seed data with realistic Singapore data (students, courses, invoices, enrollments)
 
 ---
 
-## Deployment & Infrastructure
+## Constants
+
+```typescript
+SG_TIMEZONE = 'Asia/Singapore'
+DEFAULT_ACCENT_COLOR = '#6366f1'
+DEFAULT_GST_RATE = 9          // percent
+DEFAULT_CURRENCY = 'SGD'
+DEFAULT_CANCELLATION_HOURS = 24
+DEFAULT_REMINDER_HOURS_BEFORE = 24
+DEFAULT_CLASS_DURATION_MINUTES = 60
+DEFAULT_BOOKING_LEAD_TIME_HOURS = 2
+```
+
+---
+
+## Deployment
 
 ### Environments
 
-| Environment | URL | Database | Purpose |
-|---|---|---|---|
-| Development | `localhost:3000` | Local Supabase (Docker) | Day-to-day development |
-| Staging | `staging.plio.app` | Supabase staging project | PR previews, QA |
-| Production | `app.plio.app` | Supabase production project | Live demo |
+| Environment | Database | Purpose |
+|---|---|---|
+| Development | Local Supabase (Docker) | Day-to-day development |
+| Production | Supabase Cloud (Singapore region) | Live deployment |
 
-### CI/CD Pipeline (GitHub Actions)
+### Infrastructure
 
-```yaml
-# .github/workflows/ci.yml
-on:
-  push: { branches: [main] }
-  pull_request: { branches: [main] }
+- **Hosting:** Vercel
+- **Database:** Supabase Cloud (PostgreSQL + RLS)
+- **Email:** Resend (production), Supabase Inbucket (local dev)
+- **Migrations:** 27 SQL files in `supabase/migrations/`, applied via `supabase db push`
 
-jobs:
-  lint-and-type-check:
-    - pnpm lint
-    - pnpm type-check
+### Environment Variables
 
-  unit-tests:
-    - pnpm test
+| Variable | Scope | Description |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Public | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public | Supabase anon/public key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server only | Bypasses RLS (waitlist, invites, booking) |
+| `NEXT_PUBLIC_APP_URL` | Public | Production URL for email links |
+| `RESEND_API_KEY` | Server only | Email sending in production |
+| `CHECKIN_SECRET` | Server only | HMAC secret for QR check-in tokens |
 
-  e2e-tests:
-    - Start local Supabase
-    - Seed test data
-    - pnpm playwright test
-
-  deploy:
-    needs: [lint-and-type-check, unit-tests, e2e-tests]
-    if: github.ref == 'refs/heads/main'
-    - Deploy to Vercel production
-```
-
-### Database Migrations
-
-- Managed via Supabase CLI: `supabase migration new`, `supabase db push`
-- Every schema change is a versioned SQL file in `supabase/migrations/`
-- Migrations run automatically on `supabase db push` in CI before deployment
-- Rollback strategy: write a reverse migration; never manually edit production schema
-
-### Vercel Configuration
-
-- Framework preset: Next.js
-- Build command: `turbo build --filter=web`
-- Root directory: `apps/web`
-- Environment variables: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `STRIPE_SECRET_KEY`
-- Preview deployments enabled for every PR
-
----
-
-## Demo Scenario Script
-
-A walkthrough demonstrating the full platform across two tenants.
-
-### Setup
-
-Two browser windows open side by side:
-- **Left:** Desktop browser — Admin of "Bright Tuition Centre"
-- **Right:** Mobile viewport — Parent "Mrs Tan" at the same center
-
-### Scene 1: The Admin's Morning
-
-1. Admin logs in → lands on the **Calendar** (week view)
-2. Calendar shows color-coded classes: Math (blue), Science (green), English (purple)
-3. Public holiday "Good Friday" is grayed out — no classes scheduled
-4. Admin notices "Sec 3 Math" on Tuesday has 8/8 students (full) → a waitlist indicator is visible
-
-### Scene 2: Schedule Change
-
-5. Admin drags "Sec 4 Science" from 2:00 PM to 4:00 PM on Wednesday
-6. System checks for conflicts → no conflict → class moves
-7. **On the parent's phone (right screen):** a notification pops up: "Schedule Changed: Sec 4 Science moved to 4:00 PM"
-8. The real-time update appears without any page refresh
-
-### Scene 3: Parent Cancels a Class
-
-9. Mrs Tan opens the Parent Portal → sees "Next Class: Sec 3 E-Math, Tuesday 2:00 PM"
-10. She taps "Cancel" → system confirms: "More than 24 hours away. 1 credit will be refunded."
-11. She confirms → credit balance updates from 3 → 4
-12. She taps "Book Makeup" → sees available Sec 3 Math slots with open spots
-13. Selects Thursday 3:00 PM (5/8 enrolled) → confirms → credit balance: 4 → 3
-14. **On admin's screen:** notification appears: "Mrs Tan booked a makeup class for Ethan — Sec 3 Math, Thursday"
-
-### Scene 4: Payment Flow
-
-15. Mrs Tan navigates to "Fees" → sees "March Invoice: $360.00 (incl. GST)"
-16. She taps "Pay with PayNow" → a QR code appears
-17. She opens her banking app (simulated), scans, transfers → comes back to Plio and taps "I've Paid"
-18. Uploads a screenshot of the bank transfer confirmation
-19. **On admin's screen:** "Pending Approvals" tab shows 1 new payment
-20. Admin clicks → sees the receipt screenshot alongside the invoice → taps "Verify"
-21. Invoice status turns green: "Paid". Mrs Tan receives a confirmation notification.
-
-### Scene 5: Multi-Tenant Isolation
-
-22. Admin logs out → logs in as admin of "Zen Flow Yoga Studio"
-23. Completely different data: yoga classes, different tutors, different students
-24. None of Bright Tuition's data is visible — RLS enforced at the database level
-
-### Scene 6: Analytics
-
-25. Back to Bright Tuition admin → opens "Analytics"
-26. Occupancy heatmap shows Tuesday afternoons are the busiest
-27. Revenue chart shows steady month-over-month growth
-28. Student retention: 92% — only 2 students churned last quarter
-
-**Closing:** The demo shows a potential client: "I can digitize your entire business — scheduling, payments, communication — in one platform, isolated from every other center on the system."
+Full deployment guide in `docs/production-deployment.md` and `docs/supabase-deployment.md`.

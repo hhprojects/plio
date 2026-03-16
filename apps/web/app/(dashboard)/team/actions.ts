@@ -22,7 +22,7 @@ export async function createTeamMember(formData: FormData) {
   const raw = Object.fromEntries(formData.entries())
   const parsed = teamMemberSchema.safeParse(raw)
   if (!parsed.success) {
-    return { error: parsed.error.errors[0].message }
+    return { error: parsed.error.issues[0].message }
   }
 
   const supabase = await createClient()
@@ -49,7 +49,7 @@ export async function updateTeamMember(id: string, formData: FormData) {
   const raw = Object.fromEntries(formData.entries())
   const parsed = teamMemberSchema.safeParse(raw)
   if (!parsed.success) {
-    return { error: parsed.error.errors[0].message }
+    return { error: parsed.error.issues[0].message }
   }
 
   const supabase = await createClient()

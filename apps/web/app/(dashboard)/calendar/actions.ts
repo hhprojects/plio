@@ -34,7 +34,7 @@ export async function createRecurringClass(formData: FormData) {
   }
 
   const parsed = recurringClassSchema.safeParse(raw)
-  if (!parsed.success) return { error: parsed.error.errors[0].message }
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
 
   const {
     service_id,
@@ -154,7 +154,7 @@ export async function createAppointment(formData: FormData) {
     start_time: formData.get('start_time'),
     end_time: formData.get('end_time'),
   })
-  if (!parsed.success) return { error: parsed.error.errors[0].message }
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
 
   const supabase = await createClient()
 

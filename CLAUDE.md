@@ -31,7 +31,7 @@ supabase db push      # Apply migrations locally
 **Monorepo:** Turborepo + pnpm workspaces. Package manager is pnpm 9.15.9.
 
 ```
-apps/web/          → Next.js 15.5 (App Router), React 19, TypeScript 5.9
+apps/web/          → Next.js 16 (App Router), React 19, TypeScript 5.9
 packages/db/       → Database types (@plio/db) — manually maintained, mirrors Supabase schema
 packages/utils/    → Pure utilities (@plio/utils) — date-helpers, rrule-parser, gst-calculator
 packages/ui/       → Shared UI components (@plio/ui)
@@ -46,9 +46,11 @@ supabase/          → Migrations (SQL) and config
 `components/`, `lib/`, `stores/`, `hooks/` are **siblings** to `app/` (not nested inside it).
 
 **Route groups** in `app/`:
-- `(public)/` — Unauthenticated pages (booking, privacy, terms)
+- `(auth)/` — Auth pages (login, signup, forgot-password)
+- `(public)/` — Unauthenticated pages (booking, privacy, terms, invite, register)
 - `(dashboard)/` — Protected, single layout for all roles (redirects to `/login` if no session)
   - `dashboard/`, `calendar/`, `clients/`, `services/`, `team/`, `rooms/`, `invoicing/`, `settings/` — Module pages
+  - `admin/`, `booking/`, `parent/`, `tutor/` — Role-specific pages
   - `platform/` — Super admin only (waitlist, tenants)
 - `onboarding/` — Multi-step wizard for new tenants
 
@@ -85,7 +87,8 @@ Zustand stores in `stores/`. Used in "use client" components only.
 - `module-store.ts` — `useModuleStore` with `isModuleEnabled`, `getModuleTitle`
 - `tenant-store.ts` — simplified TenantSettings (logo_url, accent_color, business_name)
 - `calendar-store.ts` — view, colorBy, filters
-- `notification-store.ts` — unchanged
+- `notification-store.ts` — unread count tracking
+- `parent-store.ts` — parent portal state
 
 ## Conventions
 

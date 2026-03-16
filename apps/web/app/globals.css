@@ -167,6 +167,15 @@
   }
 }
 
+/* Hide scrollbar utility for horizontal scroll containers */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Landing page animation keyframes */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(24px); }
@@ -202,4 +211,15 @@
 @keyframes glowPulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.3); }
   50% { box-shadow: 0 0 0 6px rgba(99, 102, 241, 0); }
+}
+
+@keyframes scrollDot {
+  0%, 20% { opacity: 1; transform: translateY(0); }
+  80%, 100% { opacity: 0; transform: translateY(16px); }
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }

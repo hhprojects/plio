@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useModuleStore } from '@/stores/module-store'
 import { Sidebar } from '@/components/sidebar'
 import { Header } from '@/components/header'
+import { InstallPrompt } from '@/components/install-prompt'
 import type { TenantModuleWithModule, TenantSettings } from '@plio/db'
 
 interface DashboardShellProps {
@@ -26,6 +27,7 @@ export function DashboardShell({ modules, role, tenantName, tenantSettings, chil
       <Sidebar modules={modules} role={role} tenantName={tenantName} tenantSettings={tenantSettings} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header tenantName={tenantName} />
+        {(role === 'client' || role === 'staff') && <InstallPrompt />}
         <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
           {children}
         </main>

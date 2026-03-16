@@ -30,7 +30,7 @@ export async function createContact(formData: FormData) {
   const raw = Object.fromEntries(formData.entries())
   const parsed = contactSchema.safeParse(raw)
   if (!parsed.success) {
-    return { error: parsed.error.errors[0].message }
+    return { error: parsed.error.issues[0].message }
   }
 
   const tags = parsed.data.tags
@@ -62,7 +62,7 @@ export async function updateContact(id: string, formData: FormData) {
   const raw = Object.fromEntries(formData.entries())
   const parsed = contactSchema.safeParse(raw)
   if (!parsed.success) {
-    return { error: parsed.error.errors[0].message }
+    return { error: parsed.error.issues[0].message }
   }
 
   const tags = parsed.data.tags
@@ -116,7 +116,7 @@ export async function addDependent(contactId: string, formData: FormData) {
   const raw = Object.fromEntries(formData.entries())
   const parsed = dependentSchema.safeParse(raw)
   if (!parsed.success) {
-    return { error: parsed.error.errors[0].message }
+    return { error: parsed.error.issues[0].message }
   }
 
   const supabase = await createClient()
@@ -142,7 +142,7 @@ export async function updateDependent(id: string, formData: FormData) {
   const raw = Object.fromEntries(formData.entries())
   const parsed = dependentSchema.safeParse(raw)
   if (!parsed.success) {
-    return { error: parsed.error.errors[0].message }
+    return { error: parsed.error.issues[0].message }
   }
 
   const supabase = await createClient()

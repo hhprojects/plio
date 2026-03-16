@@ -528,6 +528,77 @@ Your advantage: you're not just selling software — you're selling a **managed 
 
 ---
 
+## Business Registration Strategy
+
+### The Two-Phase Approach
+
+Don't register a business before you have paying clients. Validate first, formalize second.
+
+**Phase 1: Freelance Mode (0–2 clients, $0 overhead)**
+
+Collect payments via personal PayNow (phone number) or bank transfer. Declare income to IRAS as freelance/other income. Issue simple PDF invoices without a UEN — most small business owners won't ask.
+
+What you can do without registration:
+- Build demo sites and Plio
+- Cold outreach and pitching
+- Accept one-off or recurring freelance payments
+- Issue informal invoices (no UEN)
+
+What you can't do:
+- Issue invoices with a UEN
+- Open a business bank account or PayNow Business
+- Deduct business expenses against income (minor at this stage)
+
+**Phase 2: Register Sole Proprietorship (3+ clients)**
+
+Register when revenue feels like a real business (~$594/mo or 3 clients).
+
+| Step | Cost | Time |
+|---|---|---|
+| Register sole prop on BizFile+ (Singpass login) | $115 | 15 min – 2 days |
+| SSIC code: `62011 - Software development` | — | — |
+| Open business bank account (DBS free if >$3k balance, or Aspire fully online, no minimum) | $0–$20/mo | Same week |
+| Set up PayNow Business (link UEN via bank app) | Free | Same day |
+| Set up invoicing (Wave — free) | Free | Same day |
+| Register "Plio" as additional trade name (optional) | $15 | When ready |
+| **Total to launch** | **~$130** | |
+| Annual renewal | $30/year | |
+
+Switchover message to existing clients:
+> "Quick admin update — I've registered my business officially. Going forward, please send payments to my business PayNow: UEN [XXXXXXXXX]. Everything else stays the same!"
+
+**Phase 3: Upgrade to Pte Ltd (when needed)**
+
+| Trigger | Why |
+|---|---|
+| Revenue hits $5k–$8k/month consistently | Tax savings justify accounting costs (~$500–$2k/year) |
+| You want to hire someone | Pte Ltd is cleaner for employment |
+| A client requires Pte Ltd to sign a contract | Some corporates/government won't contract with sole props |
+| You want to take investment or add a co-founder | Need share structure |
+| Liability concern — a client threatens legal action | Limited liability protects personal assets |
+
+Pte Ltd costs: $315 registration, $60/year annual return, $500–$2k/year accounting.
+
+### Sole Proprietorship vs. Pte Ltd Summary
+
+| | Sole Prop | Pte Ltd |
+|---|---|---|
+| Registration | $115 | $315 |
+| Annual cost | $30/year | $60/year + accounting |
+| Liability | Unlimited (personal) | Limited (capped at share capital) |
+| Tax rate | Personal (0–22%) | Corporate 17% (startup exemptions) |
+| Multiple brands | Trade names ($15 each) | Run any brand under one entity |
+| Credibility | Seen as freelancer | "Pte Ltd" carries weight |
+| Best for | Early stage, <$5k/mo | Scaling, hiring, investment |
+
+### Multiple Projects Under One Entity
+
+You do NOT need separate companies. Both sole prop and Pte Ltd support multiple brands:
+- **Sole prop:** Register additional trade names ($15 each) — same UEN, same bank account, same tax filing
+- **Pte Ltd:** Operate any number of products/brands under one company — Plio, consulting, future ventures
+
+---
+
 ## Key Principles
 
 1. **You are a Digital Landlord, not a freelancer.** You own the infrastructure. Clients rent access.

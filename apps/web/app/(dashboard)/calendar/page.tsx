@@ -43,7 +43,8 @@ export default async function CalendarPage() {
     }
   }
 
-  let sessions: Awaited<ReturnType<typeof sessionsQuery>>['data'] = null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let sessions: any[] | null = null
 
   if (auth.role === 'client') {
     // Client: only sessions they are enrolled in

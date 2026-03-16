@@ -17,8 +17,13 @@ import {
   Activity,
   Heart,
   Settings2,
+  MapPin,
+  LayoutGrid,
+  Shield,
+  Sparkles,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { WavesBackground } from '@/components/ui/waves-background'
 import { useInView } from '@/hooks/use-in-view'
 
 /* ─── Data ────────────────────────────────────────────────────────────── */
@@ -43,7 +48,7 @@ const templates = [
     name: 'Tuition Centre',
     modules: ['Students', 'Courses', 'Tutors', 'Rooms'],
     color: '#6366f1',
-    bgTint: 'rgba(99, 102, 241, 0.05)',
+    bgTint: 'rgba(99, 102, 241, 0.06)',
     borderTint: 'rgba(99, 102, 241, 0.3)',
   },
   {
@@ -51,7 +56,7 @@ const templates = [
     name: 'Music School',
     modules: ['Students', 'Lessons', 'Studios', 'Instruments'],
     color: '#8b5cf6',
-    bgTint: 'rgba(139, 92, 246, 0.05)',
+    bgTint: 'rgba(139, 92, 246, 0.06)',
     borderTint: 'rgba(139, 92, 246, 0.3)',
   },
   {
@@ -59,7 +64,7 @@ const templates = [
     name: 'Yoga Studio',
     modules: ['Members', 'Classes', 'Instructors', 'Booking'],
     color: '#22c55e',
-    bgTint: 'rgba(34, 197, 94, 0.05)',
+    bgTint: 'rgba(34, 197, 94, 0.06)',
     borderTint: 'rgba(34, 197, 94, 0.3)',
   },
   {
@@ -67,7 +72,7 @@ const templates = [
     name: 'Wellness Centre',
     modules: ['Clients', 'Treatments', 'Therapists', 'Rooms'],
     color: '#ec4899',
-    bgTint: 'rgba(236, 72, 153, 0.05)',
+    bgTint: 'rgba(236, 72, 153, 0.06)',
     borderTint: 'rgba(236, 72, 153, 0.3)',
   },
   {
@@ -75,7 +80,7 @@ const templates = [
     name: 'Build Your Own',
     modules: ['Start blank', 'Enable what you need'],
     color: '#64748b',
-    bgTint: 'rgba(100, 116, 139, 0.05)',
+    bgTint: 'rgba(100, 116, 139, 0.06)',
     borderTint: 'rgba(100, 116, 139, 0.3)',
     dashed: true,
   },
@@ -137,10 +142,9 @@ const steps = [
 ]
 
 const proofItems = [
-  'Built in Singapore',
-  '9 configurable modules',
-  'Multi-tenant ready',
-  'Free during beta',
+  { icon: MapPin, text: 'Built in Singapore' },
+  { icon: LayoutGrid, text: '9 configurable modules' },
+  { icon: Shield, text: 'Multi-tenant ready' },
 ]
 
 /* ─── Component ───────────────────────────────────────────────────────── */
@@ -150,8 +154,9 @@ export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false)
   const [tickerIndex, setTickerIndex] = useState(0)
   const [hoveredTemplate, setHoveredTemplate] = useState<number | null>(null)
+  const [emailFocused, setEmailFocused] = useState(false)
 
-  const { ref: templatesRef, getStaggerStyle: templatesStagger, inView: templatesInView } = useInView({ threshold: 0.1, staggerInterval: 80 })
+  const { ref: templatesRef, getStaggerStyle: templatesStagger } = useInView({ threshold: 0.1, staggerInterval: 80 })
   const { ref: featuresRef, getStaggerStyle: featuresStagger, inView: featuresInView } = useInView({ threshold: 0.1, staggerInterval: 100 })
   const { ref: stepsRef, getStaggerStyle: stepsStagger, inView: stepsInView } = useInView({ threshold: 0.1, staggerInterval: 150 })
   const { ref: proofRef, getStaggerStyle: proofStagger } = useInView({ threshold: 0.2, staggerInterval: 100 })
@@ -173,25 +178,30 @@ export default function LandingPage() {
   }, [])
 
   return (
-    <div className="min-h-screen" style={{ fontFamily: 'var(--font-body)' }}>
+    <div
+      className="h-screen overflow-y-auto"
+      style={{
+        fontFamily: 'var(--font-body)',
+        scrollSnapType: 'y mandatory',
+        scrollBehavior: 'smooth',
+      }}
+    >
       {/* ── Sticky Nav ── */}
       <nav
         className={`sticky top-0 z-50 backdrop-blur-md border-b transition-shadow duration-300 ${
           scrolled ? 'shadow-sm' : 'shadow-none'
         }`}
         style={{
-          backgroundColor: 'rgba(250, 250, 248, 0.9)',
+          backgroundColor: 'rgba(250, 250, 248, 0.92)',
           borderColor: '#e2e8f0',
           animation: 'fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both',
         }}
       >
         <div className="mx-auto max-w-6xl px-6 h-16 flex items-center justify-between">
-          {/* Logo */}
           <Link href="/" className="font-display text-2xl text-indigo-500 tracking-tight">
             Plio
           </Link>
 
-          {/* Center links — desktop */}
           <div className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => (
               <a
@@ -204,19 +214,17 @@ export default function LandingPage() {
             ))}
           </div>
 
-          {/* Right actions — desktop */}
           <div className="hidden md:flex items-center gap-3">
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/login">Book a Demo</Link>
+              <a href="#cta">Book a Demo</a>
             </Button>
             <Button size="sm" className="rounded-full px-5 gap-1.5" asChild>
-              <Link href="/register">
+              <a href="#cta">
                 Join Waitlist <ArrowRight className="size-3.5" />
-              </Link>
+              </a>
             </Button>
           </div>
 
-          {/* Hamburger — mobile */}
           <button
             type="button"
             className="md:hidden p-2 text-slate-600 hover:text-slate-900 transition-colors"
@@ -247,12 +255,12 @@ export default function LandingPage() {
             ))}
             <div className="flex flex-col gap-2 pt-2">
               <Button variant="outline" size="sm" asChild>
-                <Link href="/login">Book a Demo</Link>
+                <a href="#cta">Book a Demo</a>
               </Button>
               <Button size="sm" className="rounded-full" asChild>
-                <Link href="/register">
+                <a href="#cta">
                   Join Waitlist <ArrowRight className="ml-1 size-3.5" />
-                </Link>
+                </a>
               </Button>
             </div>
           </div>
@@ -260,118 +268,108 @@ export default function LandingPage() {
       </nav>
 
       {/* ── Hero Section ── */}
-      <section className="relative overflow-hidden" style={{ backgroundColor: '#fafaf8' }}>
-        {/* Soft radial indigo glow */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: 'radial-gradient(ellipse 60% 50% at 50% 40%, rgba(99, 102, 241, 0.05), transparent 70%)',
-            animation: 'fadeUp 0.8s ease-out both',
-          }}
-        />
-
-        {/* Floating shapes */}
-        <div
-          className="absolute top-20 left-[10%] w-24 h-16 rounded-2xl opacity-[0.07]"
-          style={{
-            backgroundColor: '#6366f1',
-            animation: 'float 6s ease-in-out infinite',
-            animationDelay: '0s',
-          }}
-        />
-        <div
-          className="absolute top-32 right-[12%] w-20 h-20 rounded-2xl opacity-[0.05]"
-          style={{
-            backgroundColor: '#f59e0b',
-            animation: 'float 7s ease-in-out infinite',
-            animationDelay: '1s',
-          }}
-        />
-        <div
-          className="absolute bottom-24 left-[20%] w-16 h-12 rounded-xl opacity-[0.06]"
-          style={{
-            backgroundColor: '#6366f1',
-            animation: 'float 8s ease-in-out infinite',
-            animationDelay: '2s',
-          }}
-        />
+      <section
+        className="relative overflow-hidden flex items-center justify-center"
+        style={{
+          minHeight: '100vh',
+          scrollSnapAlign: 'start',
+        }}
+      >
+        {/* Animated wave canvas background */}
+        <WavesBackground />
 
         <div className="relative mx-auto max-w-3xl px-6 py-32 sm:py-40 text-center">
-          {/* Headline */}
           <h1
             className="font-display text-4xl sm:text-5xl lg:text-6xl text-slate-900 font-normal leading-[1.1] tracking-tight"
-            style={{
-              animation: 'fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both',
-            }}
+            style={{ animation: 'fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both' }}
           >
             One platform to run your
             <br />
             entire centre.
           </h1>
 
-          {/* Subtitle */}
           <p
             className="mt-6 text-lg sm:text-xl text-slate-500 max-w-2xl mx-auto leading-relaxed"
-            style={{
-              animation: 'fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both',
-            }}
+            style={{ animation: 'fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both' }}
           >
             Scheduling, clients, invoicing, and online booking —
             configured to fit the way you work.
           </p>
 
-          {/* CTA buttons */}
           <div
             className="mt-10 flex flex-wrap items-center justify-center gap-4"
-            style={{
-              animation: 'fadeUp 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.7s both',
-            }}
+            style={{ animation: 'fadeUp 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.7s both' }}
           >
             <Button size="lg" className="rounded-full px-8 gap-2" asChild>
-              <Link href="/register">
+              <a href="#cta">
                 Join the Waitlist <ArrowRight className="size-4" />
-              </Link>
+              </a>
             </Button>
             <Button variant="outline" size="lg" className="rounded-full px-8" asChild>
-              <Link href="/login">Book a Demo</Link>
+              <a href="#cta">Book a Demo</a>
             </Button>
           </div>
 
           {/* Verticals ticker */}
           <div
             className="mt-14 text-sm text-slate-400 tracking-wide"
-            style={{
-              animation: 'fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 1.2s both',
-            }}
+            style={{ animation: 'fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 1.2s both' }}
           >
             <span className="mr-2">Built for:</span>
             <span className="relative inline-block h-5 w-40 overflow-hidden align-middle">
-              {verticals.map((v, i) => (
-                <span
-                  key={v}
-                  className="absolute inset-0 flex items-center justify-center font-medium text-indigo-500 transition-all duration-500"
-                  style={{
-                    opacity: tickerIndex === i ? 1 : 0,
-                    transform: tickerIndex === i
-                      ? 'translateY(0)'
-                      : tickerIndex > i || (tickerIndex === 0 && i === verticals.length - 1 && tickerIndex !== i)
-                        ? 'translateY(-8px)'
-                        : 'translateY(8px)',
-                    transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
-                  }}
-                >
-                  {v}
-                </span>
-              ))}
+              {verticals.map((v, i) => {
+                const isCurrent = tickerIndex === i
+                const isPast = tickerIndex > i || (tickerIndex === 0 && i !== 0)
+                return (
+                  <span
+                    key={v}
+                    className="absolute inset-0 flex items-center justify-center font-medium text-indigo-500 transition-all duration-500"
+                    style={{
+                      opacity: isCurrent ? 1 : 0,
+                      transform: isCurrent
+                        ? 'translateY(0)'
+                        : isPast
+                          ? 'translateY(-8px)'
+                          : 'translateY(8px)',
+                      transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
+                    }}
+                  >
+                    {v}
+                  </span>
+                )
+              })}
             </span>
+          </div>
+        </div>
+
+        {/* Scroll hint */}
+        <div
+          className="absolute bottom-8 left-1/2 -translate-x-1/2"
+          style={{ animation: 'fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 1.8s both' }}
+        >
+          <div className="w-6 h-10 rounded-full border-2 border-slate-300 flex items-start justify-center p-1.5">
+            <div
+              className="w-1.5 h-1.5 rounded-full bg-slate-400"
+              style={{ animation: 'scrollDot 2s ease-in-out infinite' }}
+            />
           </div>
         </div>
       </section>
 
       {/* ── Templates Showcase ── */}
-      <section id="templates" className="py-24 sm:py-32" style={{ backgroundColor: '#fafaf8' }}>
-        <div ref={templatesRef} className="mx-auto max-w-6xl px-6">
-          {/* Section header */}
+      <section
+        id="templates"
+        className="relative flex items-center"
+        style={{
+          backgroundColor: '#fafaf8',
+          minHeight: '100vh',
+          scrollSnapAlign: 'start',
+        }}
+      >
+        {/* Top gradient fade from previous section */}
+        <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-white/60 to-transparent pointer-events-none" />
+
+        <div ref={templatesRef} className="mx-auto max-w-6xl px-6 py-24 sm:py-32 w-full">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <h2
               className="font-display text-3xl sm:text-4xl text-slate-900 tracking-tight"
@@ -389,30 +387,27 @@ export default function LandingPage() {
           </div>
 
           {/* Template cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 -mx-6 px-6 sm:mx-0 sm:px-0 sm:overflow-visible sm:grid sm:grid-cols-2 lg:grid-cols-5 sm:pb-0 scrollbar-hide">
             {templates.map((template, i) => {
               const Icon = template.icon
               const isHovered = hoveredTemplate === i
               return (
                 <div
                   key={template.name}
-                  className={`relative bg-white rounded-xl p-6 cursor-default transition-all duration-300 ${
+                  className={`relative bg-white rounded-xl p-6 cursor-default transition-all duration-300 snap-center flex-shrink-0 w-[280px] sm:w-auto ${
                     template.dashed
                       ? 'border-2 border-dashed border-slate-300'
-                      : 'border border-slate-200'
+                      : 'border border-slate-200 shadow-sm'
                   }`}
                   style={{
                     ...templatesStagger(i + 2),
                     ...(isHovered
                       ? {
-                          transform: 'translateY(-4px)',
-                          boxShadow: '0 10px 40px -10px rgba(0,0,0,0.1)',
+                          transform: 'translateY(-6px)',
+                          boxShadow: '0 12px 40px -10px rgba(0,0,0,0.12)',
                           backgroundColor: template.bgTint,
                           borderColor: template.borderTint,
                         }
-                      : {}),
-                    ...(template.dashed && isHovered
-                      ? { borderColor: template.borderTint }
                       : {}),
                   }}
                   onMouseEnter={() => setHoveredTemplate(i)}
@@ -421,7 +416,7 @@ export default function LandingPage() {
                   <div
                     className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors duration-300"
                     style={{
-                      backgroundColor: isHovered ? `${template.color}15` : '#e0e7ff',
+                      backgroundColor: isHovered ? `${template.color}18` : '#e0e7ff',
                       color: isHovered ? template.color : '#6366f1',
                     }}
                   >
@@ -429,18 +424,22 @@ export default function LandingPage() {
                   </div>
                   <h3 className="font-semibold text-slate-900 mt-3 text-lg">{template.name}</h3>
 
-                  {/* Module list — reveals on hover */}
-                  <div className="mt-3 space-y-1.5 min-h-[80px]">
+                  {/* Module list — stagger reveal on hover */}
+                  <div className="mt-3 space-y-1.5">
                     {template.modules.map((mod, mi) => (
                       <p
                         key={mod}
                         className="text-sm text-slate-500 transition-all duration-300"
                         style={{
-                          opacity: isHovered ? 1 : 0,
-                          transform: isHovered ? 'translateY(0)' : 'translateY(6px)',
+                          opacity: isHovered ? 1 : 0.6,
+                          transform: isHovered ? 'translateX(0)' : 'translateX(-4px)',
                           transitionDelay: isHovered ? `${mi * 50}ms` : '0ms',
                         }}
                       >
+                        <span
+                          className="inline-block w-1 h-1 rounded-full mr-2 align-middle transition-colors duration-300"
+                          style={{ backgroundColor: isHovered ? template.color : '#cbd5e1' }}
+                        />
                         {mod}
                       </p>
                     ))}
@@ -450,23 +449,34 @@ export default function LandingPage() {
             })}
           </div>
 
-          {/* Below cards text */}
           <p
             className="text-sm text-slate-400 mt-8 text-center"
             style={templatesStagger(8)}
           >
-            Or build your own from scratch{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1">
-              &rarr;
-            </span>
+            Or build your own from scratch &rarr;
           </p>
         </div>
       </section>
 
       {/* ── Features Bento Grid ── */}
-      <section id="features" className="bg-white py-24 sm:py-32">
-        <div ref={featuresRef} className="mx-auto max-w-6xl px-6">
-          {/* Section header */}
+      <section
+        id="features"
+        className="relative flex items-center"
+        style={{
+          backgroundColor: '#ffffff',
+          minHeight: '100vh',
+          scrollSnapAlign: 'start',
+        }}
+      >
+        {/* Section transition — subtle curved separator */}
+        <div
+          className="absolute top-0 left-0 right-0 h-16 pointer-events-none"
+          style={{
+            background: 'linear-gradient(to bottom, #fafaf8, transparent)',
+          }}
+        />
+
+        <div ref={featuresRef} className="mx-auto max-w-6xl px-6 py-24 sm:py-32 w-full">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <h2
               className="font-display text-3xl sm:text-4xl text-slate-900 tracking-tight"
@@ -489,12 +499,11 @@ export default function LandingPage() {
               return (
                 <div
                   key={feature.title}
-                  className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
+                  className="group bg-white rounded-xl border border-slate-200 shadow-sm p-8 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
                   style={{
-                    ...featuresStagger(i + 2),
-                    ...(i === 0
-                      ? { animation: featuresInView ? 'slideInLeft 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both' : 'none', opacity: featuresInView ? undefined : 0 }
-                      : { animation: featuresInView ? 'slideInRight 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both' : 'none', opacity: featuresInView ? undefined : 0 }),
+                    opacity: featuresInView ? 1 : 0,
+                    transform: featuresInView ? 'translateX(0)' : `translateX(${i === 0 ? '-24px' : '24px'})`,
+                    transition: `opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${200 + i * 100}ms, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${200 + i * 100}ms`,
                   }}
                 >
                   <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
@@ -503,36 +512,43 @@ export default function LandingPage() {
                   <h3 className="mt-4 text-lg font-semibold text-slate-900">{feature.title}</h3>
                   <p className="mt-2 text-sm text-slate-500 leading-relaxed">{feature.description}</p>
 
-                  {/* Mini CSS illustration */}
+                  {/* Mini CSS illustration — Calendar */}
                   {feature.title === 'Calendar' && (
                     <div className="mt-6 grid grid-cols-7 gap-1">
                       {Array.from({ length: 7 }).map((_, d) => (
-                        <div key={`header-${d}`} className="h-3 rounded-sm bg-indigo-100" />
+                        <div key={`h-${d}`} className="h-3 rounded-sm bg-indigo-100" />
                       ))}
                       {Array.from({ length: 21 }).map((_, d) => (
                         <div
-                          key={`cell-${d}`}
-                          className={`h-6 rounded-sm ${
-                            [3, 10, 15, 18].includes(d) ? 'bg-indigo-200' : 'bg-slate-50'
-                          }`}
+                          key={`c-${d}`}
+                          className="h-6 rounded-sm transition-all duration-500"
+                          style={{
+                            backgroundColor: [3, 10, 15, 18].includes(d) ? '#c7d2fe' : '#f8fafc',
+                            transitionDelay: featuresInView ? `${d * 30 + 400}ms` : '0ms',
+                            opacity: featuresInView ? 1 : 0,
+                            transform: featuresInView ? 'scale(1)' : 'scale(0.8)',
+                          }}
                         />
                       ))}
                     </div>
                   )}
+                  {/* Mini CSS illustration — Clients */}
                   {feature.title === 'Clients' && (
                     <div className="mt-6 space-y-2">
                       {[1, 2, 3, 4].map((row) => (
-                        <div key={row} className="flex items-center gap-3">
+                        <div
+                          key={row}
+                          className="flex items-center gap-3 transition-all duration-500"
+                          style={{
+                            opacity: featuresInView ? 1 : 0,
+                            transform: featuresInView ? 'translateX(0)' : 'translateX(12px)',
+                            transitionDelay: featuresInView ? `${row * 80 + 400}ms` : '0ms',
+                          }}
+                        >
                           <div className="w-7 h-7 rounded-full bg-indigo-100 flex-shrink-0" />
                           <div className="flex-1 space-y-1">
-                            <div
-                              className="h-2.5 rounded-full bg-slate-100"
-                              style={{ width: `${60 + row * 8}%` }}
-                            />
-                            <div
-                              className="h-2 rounded-full bg-slate-50"
-                              style={{ width: `${40 + row * 5}%` }}
-                            />
+                            <div className="h-2.5 rounded-full bg-slate-100" style={{ width: `${60 + row * 8}%` }} />
+                            <div className="h-2 rounded-full bg-slate-50" style={{ width: `${40 + row * 5}%` }} />
                           </div>
                         </div>
                       ))}
@@ -557,9 +573,7 @@ export default function LandingPage() {
                 >
                   <div
                     className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      feature.accent
-                        ? 'bg-amber-50 text-amber-600'
-                        : 'bg-indigo-50 text-indigo-600'
+                      feature.accent ? 'bg-amber-50 text-amber-600' : 'bg-indigo-50 text-indigo-600'
                     }`}
                   >
                     <Icon className="size-5" />
@@ -574,9 +588,21 @@ export default function LandingPage() {
       </section>
 
       {/* ── How It Works ── */}
-      <section id="how-it-works" className="py-24 sm:py-32" style={{ backgroundColor: '#fafaf8' }}>
-        <div ref={stepsRef} className="mx-auto max-w-6xl px-6">
-          {/* Section header */}
+      <section
+        id="how-it-works"
+        className="relative flex items-center"
+        style={{
+          backgroundColor: '#fafaf8',
+          minHeight: '100vh',
+          scrollSnapAlign: 'start',
+        }}
+      >
+        <div
+          className="absolute top-0 left-0 right-0 h-16 pointer-events-none"
+          style={{ background: 'linear-gradient(to bottom, #ffffff, transparent)' }}
+        />
+
+        <div ref={stepsRef} className="mx-auto max-w-6xl px-6 py-24 sm:py-32 w-full">
           <h2
             className="font-display text-3xl sm:text-4xl text-slate-900 tracking-tight text-center mb-16"
             style={stepsStagger(0)}
@@ -584,7 +610,6 @@ export default function LandingPage() {
             Up and running in minutes.
           </h2>
 
-          {/* Steps with connector */}
           <div className="relative">
             {/* Dashed connector line — desktop only */}
             <div className="hidden lg:block absolute top-10 left-[16%] right-[16%] h-0">
@@ -624,56 +649,80 @@ export default function LandingPage() {
                     {step.num}
                   </span>
                   <h3 className="mt-3 font-semibold text-lg text-slate-900">{step.title}</h3>
-                  <p className="mt-2 text-sm text-slate-500 leading-relaxed max-w-xs mx-auto">
-                    {step.desc}
-                  </p>
+                  <p className="mt-2 text-sm text-slate-500 leading-relaxed max-w-xs mx-auto">{step.desc}</p>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Social Proof Strip — integrated below steps */}
+          <div ref={proofRef} className="mt-24 pt-12 border-t border-slate-200">
+            <div className="grid grid-cols-2 gap-y-6 gap-x-4 sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-x-0 sm:gap-y-6">
+              {proofItems.map((item, i) => {
+                const ItemIcon = item.icon
+                return (
+                  <div key={item.text} className="flex items-center justify-center sm:justify-start">
+                    {i > 0 && <div className="hidden sm:block w-px h-8 bg-slate-200 mx-8" />}
+                    <p
+                      className="text-sm font-medium text-slate-600 text-center flex items-center gap-2"
+                      style={proofStagger(i)}
+                    >
+                      <ItemIcon className="size-4 text-indigo-400 flex-shrink-0" />
+                      {item.text}
+                    </p>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── Social Proof Strip ── */}
-      <section className="bg-white border-y border-slate-200">
-        <div ref={proofRef} className="mx-auto max-w-6xl px-6 py-12">
-          <div className="flex flex-wrap items-center justify-center gap-x-0 gap-y-6">
-            {proofItems.map((item, i) => (
-              <div key={item} className="flex items-center">
-                {i > 0 && (
-                  <div className="hidden sm:block w-px h-8 bg-slate-200 mx-8" />
-                )}
-                <p
-                  className="text-sm font-medium text-slate-700 text-center px-4 sm:px-0"
-                  style={proofStagger(i)}
-                >
-                  {item}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ── CTA Banner ── */}
-      <section className="relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #6366f1, #818cf8)' }}>
+      <section
+        id="cta"
+        className="relative overflow-hidden flex items-center"
+        style={{
+          background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 50%, #6366f1 100%)',
+          backgroundSize: '200% 200%',
+          animation: 'gradientShift 8s ease infinite',
+          minHeight: '100vh',
+          scrollSnapAlign: 'start',
+        }}
+      >
         {/* Radial glow overlay */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.12), transparent 70%)',
+            background: 'radial-gradient(ellipse 80% 60% at 50% 40%, rgba(255,255,255,0.15), transparent 70%)',
           }}
         />
 
-        <div ref={ctaRef} className="relative mx-auto max-w-3xl px-6 py-20 sm:py-28 text-center">
+        {/* Decorative floating shapes */}
+        <div
+          className="absolute top-[15%] left-[5%] w-40 h-28 rounded-3xl blur-3xl"
+          style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.06)',
+            animation: 'float 7s ease-in-out infinite',
+          }}
+        />
+        <div
+          className="absolute bottom-[20%] right-[8%] w-32 h-32 rounded-3xl blur-3xl"
+          style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            animation: 'float 9s ease-in-out infinite 2s',
+          }}
+        />
+
+        <div ref={ctaRef} className="relative mx-auto max-w-3xl px-6 py-20 sm:py-28 text-center w-full">
           <h2
-            className="font-display text-3xl sm:text-4xl text-white tracking-tight"
+            className="font-display text-3xl sm:text-4xl lg:text-5xl text-white tracking-tight"
             style={ctaStagger(0)}
           >
             Ready to ditch the spreadsheet?
           </h2>
           <p
-            className="mt-4 text-base text-indigo-100"
+            className="mt-4 text-base sm:text-lg text-indigo-100 max-w-lg mx-auto"
             style={ctaStagger(1)}
           >
             Join the waitlist — we&apos;ll let you know when it&apos;s your turn.
@@ -682,24 +731,21 @@ export default function LandingPage() {
           {/* Inline email form */}
           <form
             onSubmit={(e) => e.preventDefault()}
-            className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto"
+            className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto"
             style={ctaStagger(2)}
           >
             <input
               type="email"
               placeholder="your@email.com"
-              className="w-full sm:flex-1 px-4 py-3 rounded-full bg-white/95 text-slate-900 placeholder:text-slate-400 text-sm outline-none transition-shadow duration-300 focus:ring-2 focus:ring-white/50"
-              style={{ boxShadow: '0 0 0 0 rgba(255,255,255,0)' }}
-              onFocus={(e) => {
-                e.currentTarget.style.animation = 'glowPulse 2s ease-in-out infinite'
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.animation = 'none'
-              }}
+              className={`w-full sm:flex-1 px-5 py-3.5 rounded-full bg-white/95 text-slate-900 placeholder:text-slate-400 text-sm outline-none transition-all duration-300 focus:ring-2 focus:ring-white/50 ${
+                emailFocused ? 'shadow-[0_0_0_4px_rgba(255,255,255,0.2)]' : ''
+              }`}
+              onFocus={() => setEmailFocused(true)}
+              onBlur={() => setEmailFocused(false)}
             />
             <button
               type="submit"
-              className="w-full sm:w-auto px-6 py-3 rounded-full bg-white text-indigo-600 font-medium text-sm transition-all duration-200 hover:scale-105 flex items-center justify-center gap-2 group"
+              className="w-full sm:w-auto px-7 py-3.5 rounded-full bg-white text-indigo-600 font-semibold text-sm transition-all duration-200 hover:scale-105 hover:shadow-lg flex items-center justify-center gap-2 group"
             >
               Join Waitlist
               <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" />
@@ -708,8 +754,8 @@ export default function LandingPage() {
 
           <p className="mt-6" style={ctaStagger(3)}>
             <a
-              href="/login"
-              className="text-sm text-indigo-200 hover:text-white transition-colors inline-flex items-center gap-1 group"
+              href="#cta"
+              className="text-sm text-indigo-200 hover:text-white transition-colors inline-flex items-center gap-1.5 group"
             >
               Or book a personal demo
               <ArrowRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-1" />
@@ -719,39 +765,35 @@ export default function LandingPage() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-slate-200" style={{ backgroundColor: '#fafaf8' }}>
+      <footer
+        className="border-t border-slate-200"
+        style={{
+          backgroundColor: '#fafaf8',
+          scrollSnapAlign: 'end',
+        }}
+      >
         <div className="mx-auto max-w-6xl px-6 py-12">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-            {/* Col 1: Brand */}
             <div>
               <span className="font-display text-xl text-indigo-500">Plio</span>
               <p className="mt-2 text-sm text-slate-400">Built in Singapore</p>
               <p className="text-sm text-slate-400">&copy; 2026</p>
             </div>
 
-            {/* Col 2: Product */}
             <div>
               <h4 className="text-sm font-semibold text-slate-900 mb-3">Product</h4>
               <div className="flex flex-col gap-2">
-                <a href="#features" className="text-sm text-slate-500 hover:text-slate-900 transition-colors">
-                  Features
-                </a>
-                <a href="#templates" className="text-sm text-slate-500 hover:text-slate-900 transition-colors">
-                  Templates
-                </a>
+                <a href="#features" className="text-sm text-slate-500 hover:text-slate-900 transition-colors">Features</a>
+                <a href="#templates" className="text-sm text-slate-500 hover:text-slate-900 transition-colors">Templates</a>
+                <span className="text-sm text-slate-400">Pricing (soon)</span>
               </div>
             </div>
 
-            {/* Col 3: Legal */}
             <div>
               <h4 className="text-sm font-semibold text-slate-900 mb-3">Legal</h4>
               <div className="flex flex-col gap-2">
-                <Link href="/privacy" className="text-sm text-slate-500 hover:text-slate-900 transition-colors">
-                  Privacy
-                </Link>
-                <Link href="/terms" className="text-sm text-slate-500 hover:text-slate-900 transition-colors">
-                  Terms
-                </Link>
+                <Link href="/privacy" className="text-sm text-slate-500 hover:text-slate-900 transition-colors">Privacy</Link>
+                <Link href="/terms" className="text-sm text-slate-500 hover:text-slate-900 transition-colors">Terms</Link>
               </div>
             </div>
           </div>

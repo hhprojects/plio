@@ -42,6 +42,13 @@ interface FilterOption {
   color?: string | null
 }
 
+interface ServiceOption {
+  id: string
+  name: string
+  color?: string | null
+  duration_minutes: number | null
+}
+
 interface ContactOption {
   id: string
   name: string
@@ -49,7 +56,7 @@ interface ContactOption {
 
 interface CalendarPageClientProps {
   sessions: SessionWithRelations[]
-  services: FilterOption[]
+  services: ServiceOption[]
   teamMembers: FilterOption[]
   rooms: { id: string; name: string }[]
   contacts: ContactOption[]

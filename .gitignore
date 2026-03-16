@@ -56,4 +56,10 @@ test-results/
 # Worktrees
 .worktrees/
 
+# Scratch / throwaway scripts
+test-practitioner-debug.mjs
+
+# Supabase Studio scratch queries
+supabase/snippets/
+
 docs/plans

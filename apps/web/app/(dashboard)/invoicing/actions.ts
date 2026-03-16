@@ -57,7 +57,7 @@ export async function createInvoice(payload: {
 
   const parsed = invoiceSchema.safeParse(payload)
   if (!parsed.success) {
-    return { error: parsed.error.errors[0].message }
+    return { error: parsed.error.issues[0].message }
   }
 
   const { contact_id, line_items, gst_rate, due_date, notes } = parsed.data

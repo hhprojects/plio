@@ -4,9 +4,11 @@ import { Pencil, Trash2, DoorOpen } from 'lucide-react'
 
 interface Room {
   id: string
+  tenant_id: string
   name: string
   capacity: number
   is_active: boolean
+  created_at: string
 }
 
 interface RoomTableProps {
