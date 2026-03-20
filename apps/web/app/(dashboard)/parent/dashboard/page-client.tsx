@@ -1,25 +1,24 @@
 'use client'
 
 import { useEffect } from 'react'
-import { CalendarDays, CreditCard, Bell, Clock } from 'lucide-react'
+import { CalendarDays, Bell, Clock } from 'lucide-react'
 import { useParentStore } from '@/stores/parent-store'
 import { StudentSelector } from '@/components/parent/student-selector'
 
 interface DashboardData {
   children: Array<{ id: string; fullName: string }>
   nextClasses: Array<{
-    studentId: string
-    studentName: string
+    dependentId: string
+    dependentName: string
     enrollmentId: string
     date: string
     startTime: string
     endTime: string
-    courseTitle: string
-    courseColor: string
-    tutorName: string
+    serviceName: string
+    serviceColor: string
+    teamMemberName: string
     roomName: string | null
   }>
-  creditBalances: Record<string, number>
   recentActivity: Array<{
     id: string
     type: string
@@ -38,12 +37,8 @@ export function ParentDashboardClient({ data }: { data: DashboardData }) {
   }, [data.children, setStudents])
 
   const nextClass = data.nextClasses.find(
-    (c) => !selectedStudentId || c.studentId === selectedStudentId
+    (c) => !selectedStudentId || c.dependentId === selectedStudentId
   )
-
-  const creditBalance = selectedStudentId
-    ? data.creditBalances[selectedStudentId] ?? 0
-    : Object.values(data.creditBalances).reduce((a, b) => a + b, 0)
 
   return (
     <div className="space-y-4">
@@ -63,9 +58,9 @@ export function ParentDashboardClient({ data }: { data: DashboardData }) {
             <div className="flex items-center gap-2">
               <div
                 className="h-3 w-3 rounded-full"
-                style={{ backgroundColor: nextClass.courseColor }}
+                style={{ backgroundColor: nextClass.serviceColor }}
               />
-              <span className="text-lg font-semibold">{nextClass.courseTitle}</span>
+              <span className="text-lg font-semibold">{nextClass.serviceName}</span>
             </div>
             <div className="mt-2 space-y-1 text-sm text-gray-500">
               <p>
@@ -78,29 +73,12 @@ export function ParentDashboardClient({ data }: { data: DashboardData }) {
               <p>
                 {nextClass.startTime.slice(0, 5)} - {nextClass.endTime.slice(0, 5)}
               </p>
-              <p>Tutor: {nextClass.tutorName}</p>
+              <p>Instructor: {nextClass.teamMemberName}</p>
               {nextClass.roomName && <p>Room: {nextClass.roomName}</p>}
             </div>
           </div>
         ) : (
           <p className="mt-3 text-sm text-gray-400">No upcoming classes</p>
-        )}
-      </div>
-
-      {/* Credit Balance Card */}
-      <div className="rounded-xl border-l-4 border-l-green-500 bg-white p-4 shadow-sm">
-        <div className="flex items-center gap-2 text-sm font-medium text-green-600">
-          <CreditCard className="h-4 w-4" />
-          Credit Balance
-        </div>
-        <div className="mt-2">
-          <span className="text-3xl font-bold">{creditBalance}</span>
-          <span className="ml-1 text-sm text-gray-500">credits</span>
-        </div>
-        {selectedStudentId && data.children.length > 0 && (
-          <p className="mt-1 text-sm text-gray-400">
-            {data.children.find((c) => c.id === selectedStudentId)?.fullName}
-          </p>
         )}
       </div>
 

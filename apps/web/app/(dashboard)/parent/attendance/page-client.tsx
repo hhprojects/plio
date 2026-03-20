@@ -25,11 +25,10 @@ interface AttendanceEntry {
   date: string
   startTime: string
   endTime: string
-  courseTitle: string
-  courseColor: string
+  serviceName: string
+  serviceColor: string
   status: string
   checkedInAt: string | null
-  cancelledAt: string | null
 }
 
 interface Summary {
@@ -164,10 +163,10 @@ export function AttendancePageClient({ data }: { data: AttendanceData }) {
                         <div className="flex items-center gap-2">
                           <div
                             className="h-2 w-2 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: entry.courseColor }}
+                            style={{ backgroundColor: entry.serviceColor }}
                           />
                           <span className="text-sm font-medium truncate">
-                            {entry.courseTitle}
+                            {entry.serviceName}
                           </span>
                         </div>
                         <p className="text-xs text-gray-400">

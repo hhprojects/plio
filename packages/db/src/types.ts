@@ -54,6 +54,11 @@ export interface TenantSettings {
   logo_url?: string;
   accent_color?: string;
   business_name?: string;
+  timezone?: string;
+  currency?: string;
+  cancellation_hours?: number;
+  gst_registered?: boolean;
+  gst_rate?: number;
 }
 
 export interface CalendarModuleConfig {

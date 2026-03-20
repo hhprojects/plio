@@ -182,7 +182,7 @@ export async function getAvailableSlots(
       if (!hasConflict) {
         slots.push({
           team_member_id: avail.team_member_id,
-          team_member_name: (avail.team_member as any)?.name ?? 'Unknown',
+          team_member_name: (avail.team_member as unknown as { id: string; name: string } | null)?.name ?? 'Unknown',
           start_time: slotStart,
           end_time: slotEnd,
         })

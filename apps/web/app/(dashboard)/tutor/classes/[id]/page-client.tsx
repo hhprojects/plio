@@ -27,8 +27,8 @@ function formatDate(dateStr: string) {
 
 interface EnrollmentItem {
   id: string
-  studentId: string
-  studentName: string
+  dependentId: string
+  dependentName: string
   status: string
   checkedInAt: string | null
 }
@@ -39,9 +39,8 @@ interface ClassData {
   startTime: string
   endTime: string
   status: string
-  maxCapacity: number
-  courseTitle: string
-  courseColor: string
+  serviceName: string
+  serviceColor: string
   roomName: string | null
   enrollments: EnrollmentItem[]
 }
@@ -117,10 +116,10 @@ export function ClassDetailClient({ classInstanceId }: { classInstanceId: string
         <div className="flex items-start gap-3">
           <div
             className="mt-0.5 h-14 w-1.5 shrink-0 rounded-full"
-            style={{ backgroundColor: classData.courseColor }}
+            style={{ backgroundColor: classData.serviceColor }}
           />
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">{classData.courseTitle}</h1>
+            <h1 className="text-xl font-semibold text-gray-900">{classData.serviceName}</h1>
             <p className="mt-1 text-sm text-gray-500">{formatDate(classData.date)}</p>
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
               <span className="flex items-center gap-1">
@@ -158,7 +157,7 @@ export function ClassDetailClient({ classInstanceId }: { classInstanceId: string
             {classData.enrollments.map((enrollment) => (
               <li key={enrollment.id} className="flex items-center justify-between px-4 py-3">
                 <div>
-                  <p className="font-medium text-gray-900">{enrollment.studentName}</p>
+                  <p className="font-medium text-gray-900">{enrollment.dependentName}</p>
                   <p className="text-xs text-gray-500 capitalize">
                     {enrollment.status === 'attended'
                       ? 'Present'

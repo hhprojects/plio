@@ -162,15 +162,6 @@ export function addDays(date: Date, days: number): Date {
 }
 
 /**
- * Calculate the difference in hours between two dates.
- * Returns positive if date1 is after date2.
- */
-export function diffInHours(date1: Date, date2: Date): number {
-  const diffMs = date1.getTime() - date2.getTime();
-  return diffMs / (1000 * 60 * 60);
-}
-
-/**
  * Format a Date to "YYYY-MM-DD" in SG timezone.
  */
 export function toSGDate(date: Date): string {

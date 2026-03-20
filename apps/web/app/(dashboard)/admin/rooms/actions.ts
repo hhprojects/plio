@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { getTenantId } from '@/lib/auth/cached'
 import { toSGDate } from '@plio/utils'
 
 // ---------------------------------------------------------------------------
@@ -17,35 +18,6 @@ const createRoomSchema = z.object({
 const updateRoomSchema = createRoomSchema.extend({
   id: z.string().uuid('Room ID is required'),
 })
-
-// ---------------------------------------------------------------------------
-// Helper: get tenant ID for the current user
-// ---------------------------------------------------------------------------
-
-async function getTenantId(): Promise<{ tenantId: string | null; error?: string }> {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    return { tenantId: null, error: 'Not authenticated' }
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('tenant_id')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!profile) {
-    return { tenantId: null, error: 'Profile not found' }
-  }
-
-  return { tenantId: profile.tenant_id }
-}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -63,9 +35,9 @@ export interface RoomWithDetails {
 export interface RoomUtilizationSlot {
   startTime: string
   endTime: string
-  courseTitle: string
-  colorCode: string
-  tutorName: string
+  serviceName: string
+  color: string
+  teamMemberName: string
 }
 
 // ---------------------------------------------------------------------------
@@ -99,12 +71,12 @@ export async function getRooms(): Promise<{
     return { data: [] }
   }
 
-  // 2. Count today's scheduled class_instances per room
+  // 2. Count today's scheduled sessions per room
   const today = toSGDate(new Date())
   const roomIds = rooms.map((r) => r.id)
 
-  const { data: todayInstances } = await supabase
-    .from('class_instances')
+  const { data: todaySessions } = await supabase
+    .from('sessions')
     .select('room_id')
     .in('room_id', roomIds)
     .eq('date', today)
@@ -112,9 +84,9 @@ export async function getRooms(): Promise<{
     .eq('tenant_id', tenantId)
 
   const classCountMap: Record<string, number> = {}
-  for (const instance of todayInstances ?? []) {
-    if (instance.room_id) {
-      classCountMap[instance.room_id] = (classCountMap[instance.room_id] ?? 0) + 1
+  for (const session of todaySessions ?? []) {
+    if (session.room_id) {
+      classCountMap[session.room_id] = (classCountMap[session.room_id] ?? 0) + 1
     }
   }
 
@@ -257,15 +229,15 @@ export async function getRoomUtilization(
 
   const supabase = await createClient()
 
-  // Fetch class_instances for this room and date, joined with course and tutor
-  const { data: instances, error: queryError } = await supabase
-    .from('class_instances')
+  // Fetch sessions for this room and date, joined with service and team member
+  const { data: sessions, error: queryError } = await supabase
+    .from('sessions')
     .select(
       `
       start_time,
       end_time,
-      courses!inner(title, color_code),
-      profiles!class_instances_tutor_id_fkey(full_name)
+      service:services(name, color),
+      team_member:team_members(name)
     `
     )
     .eq('room_id', roomId)
@@ -278,16 +250,16 @@ export async function getRoomUtilization(
     return { data: [], error: queryError.message }
   }
 
-  const slots: RoomUtilizationSlot[] = (instances ?? []).map((inst) => {
-    const course = inst.courses as unknown as { title: string; color_code: string }
-    const profile = inst.profiles as unknown as { full_name: string } | null
+  const slots: RoomUtilizationSlot[] = (sessions ?? []).map((s) => {
+    const service = s.service as unknown as { name: string; color: string }
+    const teamMember = s.team_member as unknown as { name: string } | null
 
     return {
-      startTime: inst.start_time,
-      endTime: inst.end_time,
-      courseTitle: course?.title ?? 'Unknown',
-      colorCode: course?.color_code ?? '#6366f1',
-      tutorName: profile?.full_name ?? 'Unassigned',
+      startTime: s.start_time,
+      endTime: s.end_time,
+      serviceName: service?.name ?? 'Unknown',
+      color: service?.color ?? '#6366f1',
+      teamMemberName: teamMember?.name ?? 'Unassigned',
     }
   })
 

@@ -3,34 +3,25 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { getTenantId } from '@/lib/auth/cached'
 
 const inviteSchema = z.object({
   email: z.string().email('Please enter a valid email'),
   full_name: z.string().min(1, 'Name is required').max(200),
-  role: z.enum(['admin', 'tutor', 'parent']),
+  role: z.enum(['admin', 'staff', 'client']),
 })
 
-async function getTenantAndProfile() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated', tenantId: null, profileId: null }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, tenant_id, role')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!profile) return { error: 'Profile not found', tenantId: null, profileId: null }
-  if (!['admin', 'super_admin'].includes(profile.role)) {
+async function requireAdminAuth() {
+  const auth = await getTenantId()
+  if (auth.error || !auth.tenantId) return { error: auth.error ?? 'Not authenticated', tenantId: null, profileId: null }
+  if (!auth.role || !['admin', 'super_admin'].includes(auth.role)) {
     return { error: 'Not authorized', tenantId: null, profileId: null }
   }
-
-  return { error: null, tenantId: profile.tenant_id, profileId: profile.id }
+  return { error: null, tenantId: auth.tenantId, profileId: auth.profileId }
 }
 
 export async function getTeamMembers() {
-  const auth = await getTenantAndProfile()
+  const auth = await requireAdminAuth()
   if (auth.error || !auth.tenantId) return { data: [], error: auth.error }
 
   const supabase = await createClient()
@@ -45,7 +36,7 @@ export async function getTeamMembers() {
 }
 
 export async function getInvitations() {
-  const auth = await getTenantAndProfile()
+  const auth = await requireAdminAuth()
   if (auth.error || !auth.tenantId) return { data: [], error: auth.error }
 
   const supabase = await createClient()
@@ -72,7 +63,7 @@ export async function sendInvitation(formData: FormData) {
   }
 
   const data = parsed.data
-  const auth = await getTenantAndProfile()
+  const auth = await requireAdminAuth()
   if (auth.error || !auth.tenantId || !auth.profileId) {
     return { error: auth.error ?? 'Not authorized' }
   }
@@ -145,7 +136,7 @@ export async function sendInvitation(formData: FormData) {
 }
 
 export async function resendInvitation(invitationId: string) {
-  const auth = await getTenantAndProfile()
+  const auth = await requireAdminAuth()
   if (auth.error || !auth.tenantId) return { error: auth.error }
 
   const supabase = await createClient()
@@ -208,7 +199,7 @@ export async function resendInvitation(invitationId: string) {
 }
 
 export async function revokeInvitation(invitationId: string) {
-  const auth = await getTenantAndProfile()
+  const auth = await requireAdminAuth()
   if (auth.error || !auth.tenantId) return { error: auth.error }
 
   const supabase = await createClient()

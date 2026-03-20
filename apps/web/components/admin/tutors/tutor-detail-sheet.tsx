@@ -8,6 +8,7 @@ import {
   Phone,
 } from 'lucide-react'
 
+import { toast } from 'sonner'
 import { formatDate } from '@plio/utils'
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -30,7 +31,7 @@ import {
   getTutorSchedule,
   getTutorHours,
   type TutorWithDetails,
-  type ClassInstanceWithDetails,
+  type SessionWithDetails,
   type TutorHoursResult,
 } from '@/app/(dashboard)/admin/tutors/actions'
 
@@ -67,7 +68,7 @@ export function TutorDetailSheet({
   open,
   onOpenChange,
 }: TutorDetailSheetProps) {
-  const [schedule, setSchedule] = useState<ClassInstanceWithDetails[]>([])
+  const [schedule, setSchedule] = useState<SessionWithDetails[]>([])
   const [hours, setHours] = useState<TutorHoursResult | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -86,16 +87,20 @@ export function TutorDetailSheet({
       const monthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
       startTransition(async () => {
-        const [scheduleResult, hoursResult] = await Promise.all([
-          getTutorSchedule(tutor.id),
-          getTutorHours(tutor.id, monthStart, monthEnd),
-        ])
+        try {
+          const [scheduleResult, hoursResult] = await Promise.all([
+            getTutorSchedule(tutor.id),
+            getTutorHours(tutor.id, monthStart, monthEnd),
+          ])
 
-        if (scheduleResult.data) {
-          setSchedule(scheduleResult.data)
-        }
-        if (hoursResult.data) {
-          setHours(hoursResult.data)
+          if (scheduleResult.data) {
+            setSchedule(scheduleResult.data)
+          }
+          if (hoursResult.data) {
+            setHours(hoursResult.data)
+          }
+        } catch {
+          toast.error('Failed to load tutor data')
         }
       })
     }

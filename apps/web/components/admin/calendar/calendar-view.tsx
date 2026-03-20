@@ -11,11 +11,11 @@ import { toast } from 'sonner'
 
 import { useCalendarStore } from '@/stores/calendar-store'
 import {
-  classInstancesToEvents,
+  sessionsToEvents,
   holidaysToEvents,
-  type ClassInstanceWithDetails,
+  type SessionWithDetails,
 } from '@/lib/scheduling/calendar-helpers'
-import { rescheduleClassInstance, getClassInstances, getHolidays } from '@/app/(dashboard)/admin/calendar/actions'
+import { rescheduleSession, getSessions, getHolidays } from '@/app/(dashboard)/admin/calendar/actions'
 import { CalendarToolbar } from './calendar-toolbar'
 import { ClassEventContent } from './class-event'
 import { ClassDetailPanel } from './class-detail-panel'
@@ -35,7 +35,7 @@ import { Button } from '@/components/ui/button'
 // ---------------------------------------------------------------------------
 
 interface CalendarViewProps {
-  initialInstances: ClassInstanceWithDetails[]
+  initialInstances: SessionWithDetails[]
   initialHolidays: Holiday[]
   initialDateFrom: string
   initialDateTo: string
@@ -52,7 +52,7 @@ export function CalendarView({
   const [, startTransition] = useTransition()
 
   // Local state for events data
-  const [instances, setInstances] = useState<ClassInstanceWithDetails[]>(initialInstances)
+  const [instances, setInstances] = useState<SessionWithDetails[]>(initialInstances)
   const [holidays, setHolidays] = useState<Holiday[]>(initialHolidays)
   const [dateRange, setDateRange] = useState({ from: initialDateFrom, to: initialDateTo })
 
@@ -61,7 +61,7 @@ export function CalendarView({
   const [conflictMessages, setConflictMessages] = useState<string[]>([])
 
   // Compute FullCalendar events
-  const classEvents = classInstancesToEvents(instances)
+  const classEvents = sessionsToEvents(instances)
   const holidayEvents = holidaysToEvents(holidays)
   const allEvents = [...classEvents, ...holidayEvents]
 
@@ -74,7 +74,7 @@ export function CalendarView({
   const refetchData = useCallback(
     async (from: string, to: string) => {
       const [instancesResult, holidaysResult] = await Promise.all([
-        getClassInstances(from, to),
+        getSessions(from, to),
         getHolidays(from, to),
       ])
 
@@ -128,19 +128,17 @@ export function CalendarView({
     // Store instance data in the Zustand store (as a plain object for the panel)
     selectInstance({
       id: event.id,
-      instanceId: ext.instanceId,
+      sessionId: ext.sessionId,
       courseTitle: event.title,
       date: ext.date,
       startTime: ext.startTime,
       endTime: ext.endTime,
-      tutorName: ext.tutorName,
-      tutorId: ext.tutorId,
+      tutorName: ext.teamMemberName,
+      tutorId: ext.teamMemberId,
       roomName: ext.roomName,
       roomId: ext.roomId,
       enrollmentCount: ext.enrollmentCount,
-      maxCapacity: ext.maxCapacity,
       status: ext.status,
-      overrideNotes: ext.overrideNotes,
     })
   }
 
@@ -166,12 +164,12 @@ export function CalendarView({
 
     // Optimistic update is already applied by FullCalendar
     startTransition(async () => {
-      const result = await rescheduleClassInstance({
-        classInstanceId: ext.instanceId,
+      const result = await rescheduleSession({
+        sessionId: ext.sessionId,
         date: newDate,
         startTime: newStartTime,
         endTime: newEndTime,
-        tutorId: ext.tutorId,
+        teamMemberId: ext.teamMemberId,
         roomId: ext.roomId,
       })
 
@@ -183,7 +181,7 @@ export function CalendarView({
           // Show conflict dialog
           const messages = result.conflicts.map((c) => {
             const typeLabel = c.type === 'tutor' ? 'Tutor' : 'Room'
-            return `${typeLabel} conflict with "${c.courseName}" (${c.startTime} - ${c.endTime})`
+            return `${typeLabel} conflict with "${c.serviceName}" (${c.startTime} - ${c.endTime})`
           })
           setConflictMessages(messages)
           setConflictDialogOpen(true)

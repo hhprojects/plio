@@ -7,7 +7,6 @@ import {
   isFutureDate,
   getDayOfWeek,
   addDays,
-  diffInHours,
   toSGDate,
 } from '../date-helpers';
 
@@ -168,32 +167,6 @@ describe('addDays', () => {
     const date = new Date('2026-03-15T10:00:00Z');
     const result = addDays(date, 0);
     expect(result.getDate()).toBe(date.getDate());
-  });
-});
-
-describe('diffInHours', () => {
-  it('calculates positive difference', () => {
-    const date1 = new Date('2026-03-15T14:00:00Z');
-    const date2 = new Date('2026-03-15T10:00:00Z');
-    expect(diffInHours(date1, date2)).toBe(4);
-  });
-
-  it('calculates negative difference', () => {
-    const date1 = new Date('2026-03-15T10:00:00Z');
-    const date2 = new Date('2026-03-15T14:00:00Z');
-    expect(diffInHours(date1, date2)).toBe(-4);
-  });
-
-  it('handles fractional hours', () => {
-    const date1 = new Date('2026-03-15T10:30:00Z');
-    const date2 = new Date('2026-03-15T10:00:00Z');
-    expect(diffInHours(date1, date2)).toBe(0.5);
-  });
-
-  it('handles multi-day difference', () => {
-    const date1 = new Date('2026-03-17T10:00:00Z');
-    const date2 = new Date('2026-03-15T10:00:00Z');
-    expect(diffInHours(date1, date2)).toBe(48);
   });
 });
 

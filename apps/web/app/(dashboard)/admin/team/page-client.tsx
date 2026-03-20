@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
+import { useModuleStore } from '@/stores/module-store'
 import { UserPlus, RefreshCw, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -60,6 +61,7 @@ export function TeamPageClient({
   initialTeam: TeamMember[]
   initialInvitations: InvitationEntry[]
 }) {
+  const getModuleTitle = useModuleStore((s) => s.getModuleTitle)
   const [team, setTeam] = useState(initialTeam)
   const [invitations, setInvitations] = useState(initialInvitations)
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
@@ -106,7 +108,7 @@ export function TeamPageClient({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Team</h1>
+          <h1 className="text-2xl font-semibold">{getModuleTitle('team')}</h1>
           <p className="text-sm text-muted-foreground">
             Manage team members and invitations
           </p>

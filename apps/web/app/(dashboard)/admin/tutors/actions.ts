@@ -1,35 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-
-// ---------------------------------------------------------------------------
-// Helper: get tenant ID for the current user
-// ---------------------------------------------------------------------------
-
-async function getTenantId(): Promise<{ tenantId: string | null; error?: string }> {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    return { tenantId: null, error: 'Not authenticated' }
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('tenant_id')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!profile) {
-    return { tenantId: null, error: 'Profile not found' }
-  }
-
-  return { tenantId: profile.tenant_id }
-}
+import { getTenantId } from '@/lib/auth/cached'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -43,19 +15,19 @@ export interface TutorWithDetails {
   avatarUrl: string | null
   role: string
   isActive: boolean
-  assignedCourses: Array<{ id: string; title: string; colorCode: string }>
+  assignedServices: Array<{ id: string; name: string; color: string }>
   weeklyHours: number
   monthlyClassCount: number
 }
 
-export interface ClassInstanceWithDetails {
+export interface SessionWithDetails {
   id: string
   date: string
   startTime: string
   endTime: string
   status: string
-  courseTitle: string
-  courseColor: string
+  serviceName: string
+  serviceColor: string
   roomName: string | null
 }
 
@@ -90,7 +62,7 @@ export async function getTutors(): Promise<{
     .from('profiles')
     .select('id, full_name, email, phone, avatar_url, role, is_active')
     .eq('tenant_id', tenantId)
-    .in('role', ['tutor', 'admin'])
+    .in('role', ['staff', 'admin'])
     .order('full_name', { ascending: true })
 
   if (queryError) {
@@ -103,46 +75,63 @@ export async function getTutors(): Promise<{
 
   const tutorIds = tutors.map((t) => t.id)
 
-  // 2. Fetch recurring_schedules for these tutors to get assigned courses and weekly hours
+  // 2. Get team_member IDs for these profile IDs
+  const { data: teamMembers } = await supabase
+    .from('team_members')
+    .select('id, profile_id')
+    .in('profile_id', tutorIds)
+    .eq('tenant_id', tenantId)
+
+  // Build profile→team_member mapping
+  const profileToTeamMemberId: Record<string, string> = {}
+  for (const tm of teamMembers ?? []) {
+    if (tm.profile_id) {
+      profileToTeamMemberId[tm.profile_id] = tm.id
+    }
+  }
+
+  const teamMemberIds = Object.values(profileToTeamMemberId)
+
+  // 3. Fetch schedules for these team members to get assigned services and weekly hours
   const { data: schedules } = await supabase
-    .from('recurring_schedules')
+    .from('schedules')
     .select(
       `
-      tutor_id,
+      team_member_id,
       start_time,
       end_time,
       is_active,
-      course_id,
-      courses!inner(id, title, color_code)
+      service_id,
+      service:services!inner(id, name, color)
     `
     )
-    .in('tutor_id', tutorIds)
+    .in('team_member_id', teamMemberIds)
     .eq('tenant_id', tenantId)
 
-  // Build maps for assigned courses and weekly hours
-  const tutorCoursesMap: Record<
+  // Build maps for assigned services and weekly hours (keyed by team_member_id)
+  const tmServicesMap: Record<
     string,
-    Map<string, { id: string; title: string; colorCode: string }>
+    Map<string, { id: string; name: string; color: string }>
   > = {}
-  const tutorWeeklyHoursMap: Record<string, number> = {}
+  const tmWeeklyHoursMap: Record<string, number> = {}
 
   for (const schedule of schedules ?? []) {
-    const tutorId = schedule.tutor_id
-    const courseData = schedule.courses as unknown as {
+    const tmId = schedule.team_member_id
+    const serviceData = schedule.service as unknown as {
       id: string
-      title: string
-      color_code: string
+      name: string
+      color: string
     }
 
-    // Track unique courses per tutor
-    if (!tutorCoursesMap[tutorId]) {
-      tutorCoursesMap[tutorId] = new Map()
+    // Track unique services per team member
+    if (!tmServicesMap[tmId]) {
+      tmServicesMap[tmId] = new Map()
     }
-    if (courseData) {
-      tutorCoursesMap[tutorId].set(courseData.id, {
-        id: courseData.id,
-        title: courseData.title,
-        colorCode: courseData.color_code,
+    if (serviceData) {
+      tmServicesMap[tmId].set(serviceData.id, {
+        id: serviceData.id,
+        name: serviceData.name,
+        color: serviceData.color,
       })
     }
 
@@ -154,46 +143,49 @@ export async function getTutors(): Promise<{
       const endMinutes = (endParts[0] ?? 0) * 60 + (endParts[1] ?? 0)
       const durationHours = (endMinutes - startMinutes) / 60
 
-      tutorWeeklyHoursMap[tutorId] =
-        (tutorWeeklyHoursMap[tutorId] ?? 0) + Math.max(0, durationHours)
+      tmWeeklyHoursMap[tmId] =
+        (tmWeeklyHoursMap[tmId] ?? 0) + Math.max(0, durationHours)
     }
   }
 
-  // 3. Count class_instances in current month for each tutor
+  // 4. Count sessions in current month for each team member
   const now = new Date()
   const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
   const nextMonth = now.getMonth() === 11 ? 1 : now.getMonth() + 2
   const nextMonthYear = now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear()
   const monthEnd = `${nextMonthYear}-${String(nextMonth).padStart(2, '0')}-01`
 
-  const { data: classInstances } = await supabase
-    .from('class_instances')
-    .select('tutor_id')
-    .in('tutor_id', tutorIds)
+  const { data: sessions } = await supabase
+    .from('sessions')
+    .select('team_member_id')
+    .in('team_member_id', teamMemberIds)
     .eq('tenant_id', tenantId)
     .eq('status', 'scheduled')
     .gte('date', monthStart)
     .lt('date', monthEnd)
 
   const monthlyClassCountMap: Record<string, number> = {}
-  for (const ci of classInstances ?? []) {
-    monthlyClassCountMap[ci.tutor_id] =
-      (monthlyClassCountMap[ci.tutor_id] ?? 0) + 1
+  for (const s of sessions ?? []) {
+    monthlyClassCountMap[s.team_member_id] =
+      (monthlyClassCountMap[s.team_member_id] ?? 0) + 1
   }
 
-  // 4. Map to TutorWithDetails
-  const mapped: TutorWithDetails[] = tutors.map((t) => ({
-    id: t.id,
-    fullName: t.full_name,
-    email: t.email,
-    phone: t.phone,
-    avatarUrl: t.avatar_url,
-    role: t.role,
-    isActive: t.is_active,
-    assignedCourses: Array.from(tutorCoursesMap[t.id]?.values() ?? []),
-    weeklyHours: Math.round((tutorWeeklyHoursMap[t.id] ?? 0) * 10) / 10,
-    monthlyClassCount: monthlyClassCountMap[t.id] ?? 0,
-  }))
+  // 5. Map to TutorWithDetails (look up team_member_id from profile id)
+  const mapped: TutorWithDetails[] = tutors.map((t) => {
+    const tmId = profileToTeamMemberId[t.id]
+    return {
+      id: t.id,
+      fullName: t.full_name,
+      email: t.email,
+      phone: t.phone,
+      avatarUrl: t.avatar_url,
+      role: t.role,
+      isActive: t.is_active,
+      assignedServices: tmId ? Array.from(tmServicesMap[tmId]?.values() ?? []) : [],
+      weeklyHours: tmId ? Math.round((tmWeeklyHoursMap[tmId] ?? 0) * 10) / 10 : 0,
+      monthlyClassCount: tmId ? monthlyClassCountMap[tmId] ?? 0 : 0,
+    }
+  })
 
   return { data: mapped }
 }
@@ -204,7 +196,7 @@ export async function getTutors(): Promise<{
 
 export async function getTutorSchedule(
   tutorId: string
-): Promise<{ data: ClassInstanceWithDetails[]; error?: string }> {
+): Promise<{ data: SessionWithDetails[]; error?: string }> {
   const tenantResult = await getTenantId()
   if (tenantResult.error || !tenantResult.tenantId) {
     return { data: [], error: tenantResult.error ?? 'No tenant' }
@@ -213,6 +205,18 @@ export async function getTutorSchedule(
   const supabase = await createClient()
   const tenantId = tenantResult.tenantId
 
+  // Look up team_member_id for this profile
+  const { data: teamMember } = await supabase
+    .from('team_members')
+    .select('id')
+    .eq('profile_id', tutorId)
+    .eq('tenant_id', tenantId)
+    .single()
+
+  if (!teamMember) {
+    return { data: [] }
+  }
+
   // Get today and 7 days from now
   const today = new Date()
   const todayStr = today.toISOString().split('T')[0]
@@ -220,8 +224,8 @@ export async function getTutorSchedule(
   nextWeek.setDate(nextWeek.getDate() + 7)
   const nextWeekStr = nextWeek.toISOString().split('T')[0]
 
-  const { data: instances, error: queryError } = await supabase
-    .from('class_instances')
+  const { data: sessionRows, error: queryError } = await supabase
+    .from('sessions')
     .select(
       `
       id,
@@ -229,11 +233,11 @@ export async function getTutorSchedule(
       start_time,
       end_time,
       status,
-      courses!inner(title, color_code),
+      service:services!inner(name, color),
       rooms(name)
     `
     )
-    .eq('tutor_id', tutorId)
+    .eq('team_member_id', teamMember.id)
     .eq('tenant_id', tenantId)
     .gte('date', todayStr!)
     .lte('date', nextWeekStr!)
@@ -244,21 +248,21 @@ export async function getTutorSchedule(
     return { data: [], error: queryError.message }
   }
 
-  const mapped: ClassInstanceWithDetails[] = (instances ?? []).map((inst) => {
-    const course = inst.courses as unknown as {
-      title: string
-      color_code: string
+  const mapped: SessionWithDetails[] = (sessionRows ?? []).map((s) => {
+    const service = s.service as unknown as {
+      name: string
+      color: string
     }
-    const room = inst.rooms as unknown as { name: string } | null
+    const room = s.rooms as unknown as { name: string } | null
 
     return {
-      id: inst.id,
-      date: inst.date,
-      startTime: inst.start_time,
-      endTime: inst.end_time,
-      status: inst.status,
-      courseTitle: course?.title ?? 'Unknown',
-      courseColor: course?.color_code ?? '#6366f1',
+      id: s.id,
+      date: s.date,
+      startTime: s.start_time,
+      endTime: s.end_time,
+      status: s.status,
+      serviceName: service?.name ?? 'Unknown',
+      serviceColor: service?.color ?? '#6366f1',
       roomName: room?.name ?? null,
     }
   })
@@ -283,10 +287,22 @@ export async function getTutorHours(
   const supabase = await createClient()
   const tenantId = tenantResult.tenantId
 
-  const { data: instances, error: queryError } = await supabase
-    .from('class_instances')
+  // Look up team_member_id for this profile
+  const { data: teamMember } = await supabase
+    .from('team_members')
+    .select('id')
+    .eq('profile_id', tutorId)
+    .eq('tenant_id', tenantId)
+    .single()
+
+  if (!teamMember) {
+    return { data: null, error: 'Team member not found' }
+  }
+
+  const { data: sessionRows, error: queryError } = await supabase
+    .from('sessions')
     .select('id, date, start_time, end_time, status')
-    .eq('tutor_id', tutorId)
+    .eq('team_member_id', teamMember.id)
     .eq('tenant_id', tenantId)
     .in('status', ['scheduled', 'completed'])
     .gte('date', periodStart)
@@ -297,15 +313,15 @@ export async function getTutorHours(
     return { data: null, error: queryError.message }
   }
 
-  const allInstances = instances ?? []
+  const allSessions = sessionRows ?? []
 
   // Calculate total hours and group by week
   let totalHours = 0
   const weekMap: Map<string, { hours: number; classes: number }> = new Map()
 
-  for (const inst of allInstances) {
-    const startParts = inst.start_time.split(':').map(Number)
-    const endParts = inst.end_time.split(':').map(Number)
+  for (const s of allSessions) {
+    const startParts = s.start_time.split(':').map(Number)
+    const endParts = s.end_time.split(':').map(Number)
     const startMinutes = (startParts[0] ?? 0) * 60 + (startParts[1] ?? 0)
     const endMinutes = (endParts[0] ?? 0) * 60 + (endParts[1] ?? 0)
     const durationHours = Math.max(0, (endMinutes - startMinutes) / 60)
@@ -313,7 +329,7 @@ export async function getTutorHours(
     totalHours += durationHours
 
     // Determine the week start (Monday) for this date
-    const dateObj = new Date(inst.date + 'T00:00:00')
+    const dateObj = new Date(s.date + 'T00:00:00')
     const dayOfWeek = dateObj.getDay()
     const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
     const weekStartDate = new Date(dateObj)
@@ -336,7 +352,7 @@ export async function getTutorHours(
 
   return {
     data: {
-      totalClasses: allInstances.length,
+      totalClasses: allSessions.length,
       totalHours: Math.round(totalHours * 10) / 10,
       byWeek,
     },

@@ -22,18 +22,18 @@ import { cancelEnrollment, getParentSchedule } from './actions'
 
 interface ScheduleEntry {
   enrollmentId: string
-  studentId: string
-  studentName: string
-  classInstanceId: string
+  dependentId: string
+  dependentName: string
+  sessionId: string
   date: string
   startTime: string
   endTime: string
-  courseTitle: string
-  courseColor: string
-  tutorName: string
+  serviceName: string
+  serviceColor: string
+  teamMemberName: string
   roomName: string | null
   status: string
-  classStatus: string
+  sessionStatus: string
 }
 
 interface ScheduleData {
@@ -54,11 +54,11 @@ export function SchedulePageClient({ data }: { data: ScheduleData }) {
   }, [data.children, setStudents])
 
   const filteredUpcoming = selectedStudentId
-    ? upcoming.filter((e) => e.studentId === selectedStudentId)
+    ? upcoming.filter((e) => e.dependentId === selectedStudentId)
     : upcoming
 
   const filteredPast = selectedStudentId
-    ? past.filter((e) => e.studentId === selectedStudentId)
+    ? past.filter((e) => e.dependentId === selectedStudentId)
     : past
 
   function handleCancel() {
@@ -68,11 +68,7 @@ export function SchedulePageClient({ data }: { data: ScheduleData }) {
       if (result.error) {
         toast.error(result.error)
       } else {
-        toast.success(
-          result.creditRefunded
-            ? 'Cancelled. 1 credit refunded.'
-            : 'Cancelled. No credit refunded (past cancellation window).'
-        )
+        toast.success('Class cancelled successfully.')
         // Refresh data
         const refreshed = await getParentSchedule()
         if (refreshed.data) {
@@ -121,9 +117,9 @@ export function SchedulePageClient({ data }: { data: ScheduleData }) {
                     <div className="flex items-center gap-2">
                       <div
                         className="h-3 w-3 rounded-full"
-                        style={{ backgroundColor: entry.courseColor }}
+                        style={{ backgroundColor: entry.serviceColor }}
                       />
-                      <span className="font-medium">{entry.courseTitle}</span>
+                      <span className="font-medium">{entry.serviceName}</span>
                       <Badge
                         variant="secondary"
                         className={STATUS_COLORS[entry.status] ?? ''}
@@ -132,7 +128,7 @@ export function SchedulePageClient({ data }: { data: ScheduleData }) {
                       </Badge>
                     </div>
                     <div className="mt-2 space-y-1 text-sm text-gray-500">
-                      <p>{entry.studentName}</p>
+                      <p>{entry.dependentName}</p>
                       <p>
                         {new Date(entry.date).toLocaleDateString('en-SG', {
                           weekday: 'short',
@@ -141,7 +137,7 @@ export function SchedulePageClient({ data }: { data: ScheduleData }) {
                         })}
                         {' '}{entry.startTime.slice(0, 5)} - {entry.endTime.slice(0, 5)}
                       </p>
-                      <p>Tutor: {entry.tutorName}</p>
+                      <p>Tutor: {entry.teamMemberName}</p>
                     </div>
                   </div>
                   <Button
@@ -172,9 +168,9 @@ export function SchedulePageClient({ data }: { data: ScheduleData }) {
                 <div className="flex items-center gap-2">
                   <div
                     className="h-3 w-3 rounded-full"
-                    style={{ backgroundColor: entry.courseColor }}
+                    style={{ backgroundColor: entry.serviceColor }}
                   />
-                  <span className="font-medium">{entry.courseTitle}</span>
+                  <span className="font-medium">{entry.serviceName}</span>
                   <Badge
                     variant="secondary"
                     className={STATUS_COLORS[entry.status] ?? ''}
@@ -184,7 +180,7 @@ export function SchedulePageClient({ data }: { data: ScheduleData }) {
                 </div>
                 <div className="mt-1 text-sm text-gray-500">
                   <p>
-                    {entry.studentName} &middot;{' '}
+                    {entry.dependentName} &middot;{' '}
                     {new Date(entry.date).toLocaleDateString('en-SG', {
                       day: 'numeric',
                       month: 'short',
@@ -203,7 +199,7 @@ export function SchedulePageClient({ data }: { data: ScheduleData }) {
           <DialogHeader>
             <DialogTitle>Cancel Class</DialogTitle>
             <DialogDescription>
-              Cancel {cancelDialog?.courseTitle} on{' '}
+              Cancel {cancelDialog?.serviceName} on{' '}
               {cancelDialog?.date
                 ? new Date(cancelDialog.date).toLocaleDateString('en-SG', {
                     weekday: 'long',
@@ -214,10 +210,6 @@ export function SchedulePageClient({ data }: { data: ScheduleData }) {
               ?
             </DialogDescription>
           </DialogHeader>
-          <p className="text-sm text-gray-500">
-            If the class is more than 24 hours away, you will receive 1 credit
-            back. Otherwise, no credit will be refunded.
-          </p>
           <DialogFooter>
             <Button
               variant="outline"

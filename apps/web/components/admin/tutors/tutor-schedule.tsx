@@ -8,14 +8,14 @@ import { Card, CardContent } from '@/components/ui/card'
 import { STATUS_COLORS } from '@/lib/constants'
 import { Badge } from '@/components/ui/badge'
 
-import type { ClassInstanceWithDetails } from '@/app/(dashboard)/admin/tutors/actions'
+import type { SessionWithDetails } from '@/app/(dashboard)/admin/tutors/actions'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 interface TutorScheduleProps {
-  classes: ClassInstanceWithDetails[]
+  classes: SessionWithDetails[]
 }
 
 // ---------------------------------------------------------------------------
@@ -44,7 +44,7 @@ function formatDateLabel(dateStr: string): string {
 export function TutorSchedule({ classes }: TutorScheduleProps) {
   // Group classes by date
   const groupedByDay = useMemo(() => {
-    const map = new Map<string, ClassInstanceWithDetails[]>()
+    const map = new Map<string, SessionWithDetails[]>()
 
     for (const cls of classes) {
       const existing = map.get(cls.date) ?? []
@@ -87,10 +87,10 @@ export function TutorSchedule({ classes }: TutorScheduleProps) {
                     <div className="flex items-center gap-3">
                       <div
                         className="h-2.5 w-2.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: cls.courseColor }}
+                        style={{ backgroundColor: cls.serviceColor }}
                       />
                       <div>
-                        <p className="text-sm font-medium">{cls.courseTitle}</p>
+                        <p className="text-sm font-medium">{cls.serviceName}</p>
                         <p className="text-muted-foreground text-xs">
                           {formatTime(cls.startTime)} - {formatTime(cls.endTime)}
                           {cls.roomName && (

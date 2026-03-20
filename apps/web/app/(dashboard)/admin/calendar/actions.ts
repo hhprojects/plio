@@ -3,64 +3,36 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { getTenantId } from '@/lib/auth/cached'
 import { detectConflicts, type Conflict } from '@/lib/scheduling/conflict-detection'
-import type { ClassInstanceWithDetails } from '@/lib/scheduling/calendar-helpers'
+import type { SessionWithDetails } from '@/lib/scheduling/calendar-helpers'
 
 // ---------------------------------------------------------------------------
 // Zod schemas
 // ---------------------------------------------------------------------------
 
 const rescheduleSchema = z.object({
-  classInstanceId: z.string().uuid(),
+  sessionId: z.string().uuid(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   startTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
   endTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
-  tutorId: z.string().uuid().optional(),
+  teamMemberId: z.string().uuid().optional(),
   roomId: z.string().uuid().optional().nullable(),
 })
 
 const cancelSchema = z.object({
-  classInstanceId: z.string().uuid(),
+  sessionId: z.string().uuid(),
   reason: z.string().min(1, 'Cancellation reason is required'),
 })
 
 // ---------------------------------------------------------------------------
-// Helper: get tenant ID for the current user
+// getSessions
 // ---------------------------------------------------------------------------
 
-async function getTenantId(): Promise<{ tenantId: string | null; error?: string }> {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    return { tenantId: null, error: 'Not authenticated' }
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('tenant_id')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!profile) {
-    return { tenantId: null, error: 'Profile not found' }
-  }
-
-  return { tenantId: profile.tenant_id }
-}
-
-// ---------------------------------------------------------------------------
-// getClassInstances
-// ---------------------------------------------------------------------------
-
-export async function getClassInstances(
+export async function getSessions(
   dateFrom: string,
   dateTo: string
-): Promise<{ data: ClassInstanceWithDetails[]; error?: string }> {
+): Promise<{ data: SessionWithDetails[]; error?: string }> {
   const tenantResult = await getTenantId()
   if (tenantResult.error || !tenantResult.tenantId) {
     return { data: [], error: tenantResult.error ?? 'No tenant' }
@@ -69,9 +41,9 @@ export async function getClassInstances(
   const supabase = await createClient()
   const tenantId = tenantResult.tenantId
 
-  // Fetch class instances with course, tutor, and room joins
-  const { data: instances, error: queryError } = await supabase
-    .from('class_instances')
+  // Fetch sessions with service, team member, and room joins
+  const { data: sessions, error: queryError } = await supabase
+    .from('sessions')
     .select(
       `
       id,
@@ -79,13 +51,11 @@ export async function getClassInstances(
       start_time,
       end_time,
       status,
-      max_capacity,
-      override_notes,
-      tutor_id,
+      team_member_id,
       room_id,
-      course_id,
-      courses(title, color_code),
-      tutor:profiles!class_instances_tutor_id_fkey(full_name),
+      service_id,
+      service:services(name, color),
+      team_member:team_members(name),
       rooms(name)
     `
     )
@@ -99,46 +69,44 @@ export async function getClassInstances(
     return { data: [], error: queryError.message }
   }
 
-  if (!instances || instances.length === 0) {
+  if (!sessions || sessions.length === 0) {
     return { data: [] }
   }
 
-  // Fetch enrollment counts for all instances in one query
-  const instanceIds = instances.map((i) => i.id)
+  // Fetch enrollment counts for all sessions in one query
+  const sessionIds = sessions.map((s) => s.id)
   const { data: enrollments } = await supabase
     .from('enrollments')
-    .select('class_instance_id')
-    .in('class_instance_id', instanceIds)
+    .select('session_id')
+    .in('session_id', sessionIds)
     .neq('status', 'cancelled')
 
   // Build a count map
   const enrollmentCountMap: Record<string, number> = {}
   for (const enrollment of enrollments ?? []) {
-    const key = enrollment.class_instance_id
+    const key = enrollment.session_id
     enrollmentCountMap[key] = (enrollmentCountMap[key] ?? 0) + 1
   }
 
-  // Map to ClassInstanceWithDetails
-  const mapped: ClassInstanceWithDetails[] = instances.map((instance) => {
-    const courseData = instance.courses as unknown as { title: string; color_code: string } | null
-    const tutorData = instance.tutor as unknown as { full_name: string } | null
-    const roomData = instance.rooms as unknown as { name: string } | null
+  // Map to SessionWithDetails
+  const mapped: SessionWithDetails[] = sessions.map((session) => {
+    const serviceData = session.service as unknown as { name: string; color: string } | null
+    const teamMemberData = session.team_member as unknown as { name: string } | null
+    const roomData = session.rooms as unknown as { name: string } | null
 
     return {
-      id: instance.id,
-      date: instance.date,
-      start_time: instance.start_time,
-      end_time: instance.end_time,
-      status: instance.status,
-      max_capacity: instance.max_capacity,
-      override_notes: instance.override_notes,
-      tutor_id: instance.tutor_id,
-      room_id: instance.room_id,
-      course_id: instance.course_id,
-      course: courseData,
-      tutor: tutorData,
+      id: session.id,
+      date: session.date,
+      start_time: session.start_time,
+      end_time: session.end_time,
+      status: session.status,
+      team_member_id: session.team_member_id,
+      room_id: session.room_id,
+      service_id: session.service_id,
+      service: serviceData,
+      team_member: teamMemberData,
       room: roomData,
-      enrollment_count: enrollmentCountMap[instance.id] ?? 0,
+      enrollment_count: enrollmentCountMap[session.id] ?? 0,
     }
   })
 
@@ -176,15 +144,15 @@ export async function getHolidays(
 }
 
 // ---------------------------------------------------------------------------
-// rescheduleClassInstance
+// rescheduleSession
 // ---------------------------------------------------------------------------
 
-export async function rescheduleClassInstance(input: {
-  classInstanceId: string
+export async function rescheduleSession(input: {
+  sessionId: string
   date: string
   startTime: string
   endTime: string
-  tutorId?: string
+  teamMemberId?: string
   roomId?: string | null
 }): Promise<{ success: boolean; conflicts: Conflict[]; error?: string }> {
   // 1. Validate
@@ -212,47 +180,47 @@ export async function rescheduleClassInstance(input: {
   const supabase = await createClient()
   const tenantId = tenantResult.tenantId
 
-  // 3. Get the current instance details (to get tutorId and roomId if not provided)
-  const { data: currentInstance, error: fetchError } = await supabase
-    .from('class_instances')
-    .select('tutor_id, room_id')
-    .eq('id', data.classInstanceId)
+  // 3. Get the current session details (to get teamMemberId and roomId if not provided)
+  const { data: currentSession, error: fetchError } = await supabase
+    .from('sessions')
+    .select('team_member_id, room_id')
+    .eq('id', data.sessionId)
     .eq('tenant_id', tenantId)
     .single()
 
-  if (fetchError || !currentInstance) {
-    return { success: false, conflicts: [], error: 'Class instance not found' }
+  if (fetchError || !currentSession) {
+    return { success: false, conflicts: [], error: 'Session not found' }
   }
 
-  const tutorId = data.tutorId ?? currentInstance.tutor_id
-  const roomId = data.roomId !== undefined ? data.roomId : currentInstance.room_id
+  const teamMemberId = data.teamMemberId ?? currentSession.team_member_id
+  const roomId = data.roomId !== undefined ? data.roomId : currentSession.room_id
 
-  // 4. Run conflict detection (exclude current instance)
+  // 4. Run conflict detection (exclude current session)
   const conflicts = await detectConflicts(supabase, {
     tenantId,
     date: data.date,
     startTime,
     endTime,
-    tutorId,
+    teamMemberId,
     roomId: roomId ?? undefined,
-    excludeInstanceId: data.classInstanceId,
+    excludeSessionId: data.sessionId,
   })
 
   if (conflicts.length > 0) {
     return { success: false, conflicts }
   }
 
-  // 5. Update the class instance
+  // 5. Update the session
   const { error: updateError } = await supabase
-    .from('class_instances')
+    .from('sessions')
     .update({
       date: data.date,
       start_time: startTime,
       end_time: endTime,
-      tutor_id: tutorId,
+      team_member_id: teamMemberId,
       room_id: roomId,
     })
-    .eq('id', data.classInstanceId)
+    .eq('id', data.sessionId)
     .eq('tenant_id', tenantId)
 
   if (updateError) {
@@ -266,11 +234,11 @@ export async function rescheduleClassInstance(input: {
 }
 
 // ---------------------------------------------------------------------------
-// cancelClassInstance
+// cancelSession
 // ---------------------------------------------------------------------------
 
-export async function cancelClassInstance(input: {
-  classInstanceId: string
+export async function cancelSession(input: {
+  sessionId: string
   reason: string
 }): Promise<{ success: boolean; error?: string }> {
   // 1. Validate
@@ -291,14 +259,13 @@ export async function cancelClassInstance(input: {
   const supabase = await createClient()
   const tenantId = tenantResult.tenantId
 
-  // 3. Update status and notes
+  // 3. Update status to cancelled
   const { error: updateError } = await supabase
-    .from('class_instances')
+    .from('sessions')
     .update({
       status: 'cancelled',
-      override_notes: parsed.data.reason,
     })
-    .eq('id', parsed.data.classInstanceId)
+    .eq('id', parsed.data.sessionId)
     .eq('tenant_id', tenantId)
 
   if (updateError) {

@@ -38,11 +38,10 @@ interface ClassCard {
   date: string
   startTime: string
   endTime: string
-  courseTitle: string
-  courseColor: string
+  serviceName: string
+  serviceColor: string
   roomName: string | null
   enrolledCount: number
-  maxCapacity: number
 }
 
 export function SchedulePageClient() {
@@ -108,11 +107,11 @@ export function SchedulePageClient() {
                 {/* Color bar */}
                 <div
                   className="mt-0.5 h-12 w-1.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: cls.courseColor }}
+                  style={{ backgroundColor: cls.serviceColor }}
                 />
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-gray-900 truncate">
-                    {cls.courseTitle}
+                    {cls.serviceName}
                   </h3>
                   <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
                     <span className="flex items-center gap-1">
@@ -127,7 +126,7 @@ export function SchedulePageClient() {
                     )}
                     <span className="flex items-center gap-1">
                       <Users className="size-3.5" />
-                      {cls.enrolledCount}/{cls.maxCapacity}
+                      {cls.enrolledCount} enrolled
                     </span>
                   </div>
                 </div>

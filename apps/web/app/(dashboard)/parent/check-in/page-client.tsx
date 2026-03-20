@@ -8,14 +8,14 @@ import { generateCheckInToken } from './actions'
 
 interface EnrollmentForCheckIn {
   enrollmentId: string
-  studentId: string
-  studentName: string
-  classInstanceId: string
+  dependentId: string
+  dependentName: string
+  sessionId: string
   date: string
   startTime: string
   endTime: string
-  courseTitle: string
-  courseColor: string
+  serviceName: string
+  serviceColor: string
   checkedIn: boolean
 }
 
@@ -83,9 +83,9 @@ export function CheckInPageClient({
             <QRCodeSVG value={token} size={200} />
           </div>
           <div className="mt-4">
-            <p className="font-semibold">{selectedEnrollment.studentName}</p>
+            <p className="font-semibold">{selectedEnrollment.dependentName}</p>
             <p className="text-sm text-gray-500">
-              {selectedEnrollment.courseTitle} &middot;{' '}
+              {selectedEnrollment.serviceName} &middot;{' '}
               {selectedEnrollment.startTime.slice(0, 5)} -{' '}
               {selectedEnrollment.endTime.slice(0, 5)}
             </p>
@@ -122,12 +122,12 @@ export function CheckInPageClient({
                 <div className="flex items-center gap-2">
                   <div
                     className="h-3 w-3 rounded-full"
-                    style={{ backgroundColor: enrollment.courseColor }}
+                    style={{ backgroundColor: enrollment.serviceColor }}
                   />
-                  <span className="font-medium">{enrollment.courseTitle}</span>
+                  <span className="font-medium">{enrollment.serviceName}</span>
                 </div>
                 <p className="mt-1 text-sm text-gray-500">
-                  {enrollment.studentName} &middot;{' '}
+                  {enrollment.dependentName} &middot;{' '}
                   {enrollment.startTime.slice(0, 5)} -{' '}
                   {enrollment.endTime.slice(0, 5)}
                 </p>
@@ -151,9 +151,9 @@ export function CheckInPageClient({
               >
                 <CheckCircle className="h-5 w-5 text-green-500" />
                 <div>
-                  <p className="font-medium">{enrollment.courseTitle}</p>
+                  <p className="font-medium">{enrollment.serviceName}</p>
                   <p className="text-sm text-gray-500">
-                    {enrollment.studentName}
+                    {enrollment.dependentName}
                   </p>
                 </div>
               </div>

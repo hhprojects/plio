@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getTenantId } from '@/lib/auth/cached'
+import { requireRole } from '@/lib/auth/module-guard'
 import { getInvoices } from './actions'
 import { InvoicesPageClient } from './page-client'
 import { TableSkeleton } from '@/components/ui/table-skeleton'
@@ -14,6 +15,7 @@ export default function InvoicesPage() {
 }
 
 async function InvoicesData() {
+  await requireRole(['admin', 'super_admin'])
   const { tenantId } = await getTenantId()
   const supabase = await createClient()
 

@@ -29,9 +29,9 @@ import { useInView } from '@/hooks/use-in-view'
 /* ─── Data ────────────────────────────────────────────────────────────── */
 
 const navLinks = [
+  { label: 'Templates', href: '#templates' },
   { label: 'Features', href: '#features' },
   { label: 'How It Works', href: '#how-it-works' },
-  { label: 'Templates', href: '#templates' },
 ]
 
 const verticals = [
@@ -215,6 +215,9 @@ export default function LandingPage() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
+            <Link href="/login" className="text-sm text-slate-500 hover:text-slate-900 transition-colors">
+              Sign In
+            </Link>
             <Button variant="ghost" size="sm" asChild>
               <a href="#cta">Book a Demo</a>
             </Button>
@@ -254,11 +257,18 @@ export default function LandingPage() {
               </a>
             ))}
             <div className="flex flex-col gap-2 pt-2">
+              <Link
+                href="/login"
+                className="text-sm text-slate-500 hover:text-slate-900 transition-colors py-1"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Sign In
+              </Link>
               <Button variant="outline" size="sm" asChild>
-                <a href="#cta">Book a Demo</a>
+                <a href="#cta" onClick={() => setMobileMenuOpen(false)}>Book a Demo</a>
               </Button>
               <Button size="sm" className="rounded-full" asChild>
-                <a href="#cta">
+                <a href="#cta" onClick={() => setMobileMenuOpen(false)}>
                   Join Waitlist <ArrowRight className="ml-1 size-3.5" />
                 </a>
               </Button>
@@ -773,7 +783,7 @@ export default function LandingPage() {
         }}
       >
         <div className="mx-auto max-w-6xl px-6 py-12">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8">
             <div>
               <span className="font-display text-xl text-indigo-500">Plio</span>
               <p className="mt-2 text-sm text-slate-400">Built in Singapore</p>
@@ -794,6 +804,13 @@ export default function LandingPage() {
               <div className="flex flex-col gap-2">
                 <Link href="/privacy" className="text-sm text-slate-500 hover:text-slate-900 transition-colors">Privacy</Link>
                 <Link href="/terms" className="text-sm text-slate-500 hover:text-slate-900 transition-colors">Terms</Link>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-semibold text-slate-900 mb-3">Account</h4>
+              <div className="flex flex-col gap-2">
+                <Link href="/login" className="text-sm text-slate-500 hover:text-slate-900 transition-colors">Sign In</Link>
               </div>
             </div>
           </div>

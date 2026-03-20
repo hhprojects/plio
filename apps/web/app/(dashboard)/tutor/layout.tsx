@@ -23,7 +23,7 @@ export default async function TutorLayout({
     .eq("user_id", user.id)
     .single();
 
-  if (!profile || profile.role !== "tutor") {
+  if (!profile || !["staff", "admin"].includes(profile.role)) {
     redirect("/admin");
   }
 

@@ -2,10 +2,28 @@
 
 import { useState, useTransition, useEffect } from 'react'
 import { Plus } from 'lucide-react'
+import { toast } from 'sonner'
+import { useModuleStore } from '@/stores/module-store'
 import type { Contact, ContactDependent, ContactNote } from '@plio/db'
 import { ContactTable, type ContactWithCount } from '@/components/clients/contact-table'
 import { ContactForm } from '@/components/clients/contact-form'
 import { ContactDetail } from '@/components/clients/contact-detail'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import {
   createContact,
   updateContact,
@@ -24,6 +42,7 @@ interface ClientsPageClientProps {
 }
 
 export function ClientsPageClient({ contacts, canWrite }: ClientsPageClientProps) {
+  const getModuleTitle = useModuleStore((s) => s.getModuleTitle)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingContact, setEditingContact] = useState<ContactWithCount | null>(null)
   const [deletingContact, setDeletingContact] = useState<ContactWithCount | null>(null)
@@ -53,6 +72,11 @@ export function ClientsPageClient({ contacts, canWrite }: ClientsPageClientProps
         setNotes(nts as ContactNoteWithAuthor[])
         setDetailLoading(false)
       }
+    }).catch(() => {
+      if (!cancelled) {
+        toast.error('Failed to load contact details')
+        setDetailLoading(false)
+      }
     })
     return () => {
       cancelled = true
@@ -77,7 +101,7 @@ export function ClientsPageClient({ contacts, canWrite }: ClientsPageClientProps
     startDeleteTransition(async () => {
       const result = await deleteContact(deletingContact.id)
       if (result.error) {
-        alert(result.error)
+        toast.error(result.error)
       } else if (selectedContact?.id === deletingContact.id) {
         setSelectedContact(null)
       }
@@ -91,7 +115,7 @@ export function ClientsPageClient({ contacts, canWrite }: ClientsPageClientProps
       <div className={`flex-1 space-y-6 transition-all ${selectedContact ? 'mr-[480px]' : ''}`}>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Clients</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{getModuleTitle('clients')}</h1>
             <p className="text-sm text-gray-500 mt-1">
               Manage contacts, their dependents, and notes.
             </p>
@@ -133,59 +157,58 @@ export function ClientsPageClient({ contacts, canWrite }: ClientsPageClientProps
       )}
 
       {/* Create Dialog */}
-      {showCreateDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-semibold mb-4">Create Contact</h2>
-            <ContactForm
-              onSubmit={handleCreate}
-              onCancel={() => setShowCreateDialog(false)}
-            />
-          </div>
-        </div>
-      )}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create Contact</DialogTitle>
+          </DialogHeader>
+          <ContactForm
+            onSubmit={handleCreate}
+            onCancel={() => setShowCreateDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
-      {editingContact && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-semibold mb-4">Edit Contact</h2>
+      <Dialog open={!!editingContact} onOpenChange={(open) => !open && setEditingContact(null)}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Contact</DialogTitle>
+          </DialogHeader>
+          {editingContact && (
             <ContactForm
               contact={editingContact}
               onSubmit={handleUpdate}
               onCancel={() => setEditingContact(null)}
             />
-          </div>
-        </div>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirm Dialog */}
-      {deletingContact && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl">
-            <h2 className="text-lg font-semibold mb-2">Delete Contact</h2>
-            <p className="text-sm text-gray-600 mb-6">
-              Are you sure you want to delete <strong>{deletingContact.name}</strong>? This will
+      <AlertDialog open={!!deletingContact} onOpenChange={(open) => !open && setDeletingContact(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Contact</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{deletingContact?.name}</strong>? This will
               also remove all dependents and notes. This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setDeletingContact(null)}
-                className="border border-gray-300 px-4 py-2 rounded-md text-sm hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                disabled={isDeleting}
-                className="bg-red-600 text-white px-4 py-2 rounded-md text-sm hover:bg-red-700 disabled:opacity-50"
-              >
-                {isDeleting ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeletingContact(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

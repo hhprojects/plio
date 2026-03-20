@@ -1,3 +1,6 @@
+// NOTE: This module is a Phase 2 stub for the booking feature.
+// It references tables (practitioner_availability, availability_overrides)
+// that are part of the future booking schema.
 import { createClient } from '@/lib/supabase/server'
 import {
   computeAvailableSlots,

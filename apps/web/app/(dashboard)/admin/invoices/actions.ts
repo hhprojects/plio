@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import type { TenantSettings } from '@plio/db'
 
 // ---------------------------------------------------------------------------
 // Zod schemas
@@ -195,9 +196,10 @@ export async function createInvoice(data: {
   const supabase = await createClient()
   const items = parsed.data.line_items
   const subtotal = items.reduce((sum, item) => sum + item.amount, 0)
-  const gstRegistered = (settings as Record<string, unknown>)?.gst_registered ?? false
-  const gstRate = gstRegistered ? ((settings as Record<string, unknown>)?.gst_rate as number ?? 9) : 0
-  const gstAmount = gstRegistered ? Math.round(subtotal * (gstRate as number)) / 100 : 0
+  const typedSettings = settings as TenantSettings
+  const gstRegistered = typedSettings?.gst_registered ?? false
+  const gstRate = gstRegistered ? (typedSettings?.gst_rate ?? 9) : 0
+  const gstAmount = gstRegistered ? Math.round(subtotal * gstRate) / 100 : 0
   const total = subtotal + gstAmount
 
   // Generate invoice number
@@ -241,7 +243,7 @@ export async function generateMonthlyInvoices(month: string) {
 
   const supabase = await createClient()
 
-  // 1. Get all active enrollments with student + parent + course info
+  // 1. Get all sessions for the month with service info
   const startDate = `${month}-01`
   const endDate = new Date(
     parseInt(month.split('-')[0]),
@@ -249,19 +251,18 @@ export async function generateMonthlyInvoices(month: string) {
     0
   ).toISOString().split('T')[0]
 
-  const { data: instances } = await supabase
-    .from('class_instances')
+  const { data: sessions } = await supabase
+    .from('sessions')
     .select(`
       id,
       date,
-      courses!inner(id, title, fee_per_session),
+      service:services!inner(id, name, price),
       enrollments!inner(
-        student_id,
+        contact_id,
+        dependent_id,
         status,
-        students!inner(
-          full_name,
-          parent_id
-        )
+        contact:contacts!inner(id, name),
+        dependent:contact_dependents(name)
       )
     `)
     .eq('tenant_id', tenantId)
@@ -269,12 +270,12 @@ export async function generateMonthlyInvoices(month: string) {
     .lte('date', endDate)
     .neq('status', 'cancelled')
 
-  if (!instances || instances.length === 0) {
-    return { error: 'No classes found for this month', generated: 0 }
+  if (!sessions || sessions.length === 0) {
+    return { error: 'No sessions found for this month', generated: 0 }
   }
 
-  // 2. Group line items by parent_id
-  const parentLineItems: Record<string, Array<{
+  // 2. Group line items by contact_id (the parent/contact who pays)
+  const contactLineItems: Record<string, Array<{
     description: string
     student_name: string
     quantity: number
@@ -282,34 +283,41 @@ export async function generateMonthlyInvoices(month: string) {
     amount: number
   }>> = {}
 
-  for (const instance of instances) {
-    const course = instance.courses as unknown as { id: string; title: string; fee_per_session: number }
-    const enrollmentList = instance.enrollments as unknown as Array<{
-      student_id: string
+  for (const session of sessions) {
+    const service = session.service as unknown as { id: string; name: string; price: number }
+    const enrollmentList = session.enrollments as unknown as Array<{
+      contact_id: string
+      dependent_id: string | null
       status: string
-      students: { full_name: string; parent_id: string }
+      contact: { id: string; name: string }
+      dependent: { name: string } | null
     }>
 
     for (const enrollment of enrollmentList) {
       if (enrollment.status === 'cancelled') continue
-      const parentId = enrollment.students.parent_id
-      if (!parentLineItems[parentId]) {
-        parentLineItems[parentId] = []
+
+      const contactId = enrollment.contact_id
+      // Use dependent name if present, otherwise fall back to contact name
+      const studentName = enrollment.dependent?.name ?? enrollment.contact.name
+
+      if (!contactLineItems[contactId]) {
+        contactLineItems[contactId] = []
       }
 
-      // Find or create line item for this student+course combo
-      const existing = parentLineItems[parentId].find(
-        (li) => li.description === `${course.title} - ${enrollment.students.full_name}`
+      // Find or create line item for this student+service combo
+      const lineDescription = `${service.name} - ${studentName}`
+      const existing = contactLineItems[contactId].find(
+        (li) => li.description === lineDescription
       )
 
       if (existing) {
         existing.quantity += 1
         existing.amount = existing.quantity * existing.unit_price
       } else {
-        const unitPrice = course.fee_per_session ?? 0
-        parentLineItems[parentId].push({
-          description: `${course.title} - ${enrollment.students.full_name}`,
-          student_name: enrollment.students.full_name,
+        const unitPrice = service.price ?? 0
+        contactLineItems[contactId].push({
+          description: lineDescription,
+          student_name: studentName,
           quantity: 1,
           unit_price: unitPrice,
           amount: unitPrice,
@@ -318,16 +326,17 @@ export async function generateMonthlyInvoices(month: string) {
     }
   }
 
-  // 3. Create invoices for each parent
-  const gstRegistered = (settings as Record<string, unknown>)?.gst_registered ?? false
-  const gstRate = gstRegistered ? ((settings as Record<string, unknown>)?.gst_rate as number ?? 9) : 0
+  // 3. Create invoices for each contact
+  const typedSettings = settings as TenantSettings
+  const gstRegistered = typedSettings?.gst_registered ?? false
+  const gstRate = gstRegistered ? (typedSettings?.gst_rate ?? 9) : 0
   let generated = 0
 
-  for (const [parentId, items] of Object.entries(parentLineItems)) {
+  for (const [contactId, items] of Object.entries(contactLineItems)) {
     const subtotal = items.reduce((sum, item) => sum + item.amount, 0)
     if (subtotal <= 0) continue
 
-    const gstAmount = gstRegistered ? Math.round(subtotal * (gstRate as number)) / 100 : 0
+    const gstAmount = gstRegistered ? Math.round(subtotal * gstRate) / 100 : 0
     const total = subtotal + gstAmount
 
     const { data: numberData } = await supabase.rpc('next_invoice_number', {
@@ -338,7 +347,7 @@ export async function generateMonthlyInvoices(month: string) {
     const { error: insertError } = await supabase.from('invoices').insert({
       tenant_id: tenantId,
       invoice_number: invoiceNumber,
-      parent_id: parentId,
+      parent_id: contactId,
       line_items: items,
       subtotal,
       gst_rate: gstRate,

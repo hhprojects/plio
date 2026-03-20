@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Plus, X } from 'lucide-react'
+import { useModuleStore } from '@/stores/module-store'
 import { RoomTable } from '@/components/rooms/room-table'
 import { RoomForm } from '@/components/rooms/room-form'
 import { createRoom, updateRoom, deleteRoom } from './actions'
@@ -20,6 +21,7 @@ interface RoomsPageClientProps {
 }
 
 export function RoomsPageClient({ rooms }: RoomsPageClientProps) {
+  const getModuleTitle = useModuleStore((s) => s.getModuleTitle)
   const [showDialog, setShowDialog] = useState(false)
   const [editingRoom, setEditingRoom] = useState<Room | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -66,7 +68,7 @@ export function RoomsPageClient({ rooms }: RoomsPageClientProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Rooms</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{getModuleTitle('rooms')}</h1>
           <p className="text-sm text-gray-500 mt-1">
             Manage your rooms and their capacities.
           </p>

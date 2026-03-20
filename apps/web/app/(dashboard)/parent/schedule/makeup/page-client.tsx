@@ -25,13 +25,13 @@ import {
 import { getAvailableMakeupSlots, bookMakeupClass } from '../actions'
 
 interface Slot {
-  classInstanceId: string
+  sessionId: string
   date: string
   startTime: string
   endTime: string
-  courseTitle: string
-  courseColor: string
-  tutorName: string
+  serviceName: string
+  serviceColor: string
+  teamMemberName: string
   roomName: string | null
   availableSpots: number
   maxCapacity: number
@@ -65,7 +65,7 @@ export function MakeupPageClient({
     startTransition(async () => {
       const result = await bookMakeupClass(
         selectedStudentId,
-        confirmSlot.classInstanceId
+        confirmSlot.sessionId
       )
       if (result.error) {
         toast.error(result.error)
@@ -122,16 +122,16 @@ export function MakeupPageClient({
           </p>
           {slots.map((slot) => (
             <div
-              key={slot.classInstanceId}
+              key={slot.sessionId}
               className="flex items-center justify-between rounded-lg border bg-white p-4"
             >
               <div>
                 <div className="flex items-center gap-2">
                   <div
                     className="h-3 w-3 rounded-full"
-                    style={{ backgroundColor: slot.courseColor }}
+                    style={{ backgroundColor: slot.serviceColor }}
                   />
-                  <span className="font-medium">{slot.courseTitle}</span>
+                  <span className="font-medium">{slot.serviceName}</span>
                 </div>
                 <div className="mt-1 text-sm text-gray-500">
                   <p>
@@ -142,7 +142,7 @@ export function MakeupPageClient({
                     })}
                     {' '}{slot.startTime.slice(0, 5)} - {slot.endTime.slice(0, 5)}
                   </p>
-                  <p>Tutor: {slot.tutorName}</p>
+                  <p>Tutor: {slot.teamMemberName}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -164,7 +164,7 @@ export function MakeupPageClient({
           <DialogHeader>
             <DialogTitle>Confirm Makeup Booking</DialogTitle>
             <DialogDescription>
-              Book {confirmSlot?.courseTitle} on{' '}
+              Book {confirmSlot?.serviceName} on{' '}
               {confirmSlot?.date
                 ? new Date(confirmSlot.date).toLocaleDateString('en-SG', {
                     weekday: 'long',
@@ -175,7 +175,6 @@ export function MakeupPageClient({
               ?
             </DialogDescription>
           </DialogHeader>
-          <p className="text-sm text-gray-500">1 credit will be deducted.</p>
           <DialogFooter>
             <Button
               variant="outline"

@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 async function getParentProfile() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated', profile: null }
+  if (!user) return { error: 'Not authenticated', profile: null, email: null }
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -13,75 +13,82 @@ async function getParentProfile() {
     .eq('user_id', user.id)
     .single()
 
-  if (!profile || profile.role !== 'parent') {
-    return { error: 'Not a parent', profile: null }
+  if (!profile || profile.role !== 'client') {
+    return { error: 'Not a client', profile: null, email: null }
   }
 
-  return { error: null, profile }
+  return { error: null, profile, email: user.email! }
 }
 
-export async function getAttendanceData(studentId?: string) {
-  const { profile, error } = await getParentProfile()
-  if (error || !profile) return { data: null, error }
+export async function getAttendanceData(dependentId?: string) {
+  const { profile, email, error } = await getParentProfile()
+  if (error || !profile || !email) return { data: null, error }
 
   const supabase = await createClient()
 
-  // Get children
-  const { data: children } = await supabase
-    .from('students')
-    .select('id, full_name')
+  // Find contact by email
+  const { data: contact } = await supabase
+    .from('contacts')
+    .select('id')
+    .eq('email', email)
     .eq('tenant_id', profile.tenant_id)
-    .eq('parent_id', profile.id)
-    .eq('is_active', true)
-    .order('full_name')
+    .single()
+
+  if (!contact) return { data: { children: [], entries: [], summary: null } }
+
+  // Get dependents
+  const { data: children } = await supabase
+    .from('contact_dependents')
+    .select('id, name')
+    .eq('contact_id', contact.id)
+    .eq('tenant_id', profile.tenant_id)
+    .order('name')
 
   if (!children || children.length === 0) {
     return { data: { children: [], entries: [], summary: null } }
   }
 
-  const targetStudentId = studentId || children[0].id
+  const targetDependentId = dependentId || children[0].id
 
-  // Verify student belongs to parent
-  const isOwn = children.some((c) => c.id === targetStudentId)
+  // Verify dependent belongs to parent
+  const isOwn = children.some((c) => c.id === targetDependentId)
   if (!isOwn) return { data: null, error: 'Not authorized' }
 
-  // Fetch enrollments for this student
+  // Fetch enrollments for this dependent
   const { data: enrollments } = await supabase
     .from('enrollments')
     .select(`
       id,
       status,
       checked_in_at,
-      cancelled_at,
-      class_instances!inner(
+      session:sessions!inner(
         date,
         start_time,
         end_time,
-        courses!inner(title, color_code)
+        service:services(name, color)
       )
     `)
-    .eq('student_id', targetStudentId)
+    .eq('dependent_id', targetDependentId)
     .eq('tenant_id', profile.tenant_id)
-    .order('class_instances(date)', { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(200)
 
   const entries = (enrollments ?? []).map((e) => {
-    const ci = e.class_instances as unknown as {
+    const session = e.session as unknown as {
       date: string
       start_time: string
       end_time: string
-      courses: { title: string; color_code: string }
+      service: { name: string; color: string } | null
     }
     return {
       id: e.id,
-      date: ci.date,
-      startTime: ci.start_time,
-      endTime: ci.end_time,
-      courseTitle: ci.courses?.title ?? 'Unknown',
-      courseColor: ci.courses?.color_code ?? '#6366f1',
+      date: session.date,
+      startTime: session.start_time,
+      endTime: session.end_time,
+      serviceName: session.service?.name ?? 'Unknown',
+      serviceColor: session.service?.color ?? '#6366f1',
       status: e.status,
       checkedInAt: e.checked_in_at,
-      cancelledAt: e.cancelled_at,
     }
   })
 
@@ -96,7 +103,7 @@ export async function getAttendanceData(studentId?: string) {
 
   return {
     data: {
-      children: children.map((c) => ({ id: c.id, fullName: c.full_name })),
+      children: children.map((c) => ({ id: c.id, fullName: c.name })),
       entries,
       summary: {
         total,

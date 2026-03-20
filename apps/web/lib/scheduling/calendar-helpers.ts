@@ -5,63 +5,59 @@ import type { Holiday } from '@plio/db'
 // Types
 // ---------------------------------------------------------------------------
 
-export interface ClassInstanceWithDetails {
+export interface SessionWithDetails {
   id: string
   date: string
   start_time: string
   end_time: string
   status: string
-  max_capacity: number
-  override_notes: string | null
-  tutor_id: string
+  team_member_id: string
   room_id: string | null
-  course_id: string
-  course: { title: string; color_code: string } | null
-  tutor: { full_name: string } | null
+  service_id: string
+  service: { name: string; color: string } | null
+  team_member: { name: string } | null
   room: { name: string } | null
   enrollment_count: number
 }
 
 // ---------------------------------------------------------------------------
-// classInstancesToEvents
+// sessionsToEvents
 // ---------------------------------------------------------------------------
 
 /**
- * Transform ClassInstanceWithDetails[] into FullCalendar EventInput[].
+ * Transform SessionWithDetails[] into FullCalendar EventInput[].
  *
- * Each class instance becomes a timed event on the calendar, color-coded
- * by the course's color_code. Extended properties carry additional metadata
+ * Each session becomes a timed event on the calendar, color-coded
+ * by the service's color. Extended properties carry additional metadata
  * for the custom event renderer and detail panel.
  */
-export function classInstancesToEvents(
-  instances: ClassInstanceWithDetails[]
+export function sessionsToEvents(
+  sessions: SessionWithDetails[]
 ): EventInput[] {
-  return instances.map((instance) => {
-    const isCancelled = instance.status === 'cancelled'
-    const colorCode = instance.course?.color_code ?? '#6366f1'
+  return sessions.map((session) => {
+    const isCancelled = session.status === 'cancelled'
+    const color = session.service?.color ?? '#6366f1'
 
     return {
-      id: instance.id,
-      title: instance.course?.title ?? 'Untitled Class',
-      start: `${instance.date}T${instance.start_time}`,
-      end: `${instance.date}T${instance.end_time}`,
-      backgroundColor: isCancelled ? '#9ca3af' : colorCode,
-      borderColor: isCancelled ? '#6b7280' : colorCode,
+      id: session.id,
+      title: session.service?.name ?? 'Untitled Session',
+      start: `${session.date}T${session.start_time}`,
+      end: `${session.date}T${session.end_time}`,
+      backgroundColor: isCancelled ? '#9ca3af' : color,
+      borderColor: isCancelled ? '#6b7280' : color,
       editable: !isCancelled,
       extendedProps: {
-        instanceId: instance.id,
-        tutorName: instance.tutor?.full_name ?? 'Unassigned',
-        tutorId: instance.tutor_id,
-        roomName: instance.room?.name ?? null,
-        roomId: instance.room_id,
-        courseId: instance.course_id,
-        enrollmentCount: instance.enrollment_count,
-        maxCapacity: instance.max_capacity,
-        status: instance.status,
-        overrideNotes: instance.override_notes,
-        date: instance.date,
-        startTime: instance.start_time,
-        endTime: instance.end_time,
+        sessionId: session.id,
+        teamMemberName: session.team_member?.name ?? 'Unassigned',
+        teamMemberId: session.team_member_id,
+        roomName: session.room?.name ?? null,
+        roomId: session.room_id,
+        serviceId: session.service_id,
+        enrollmentCount: session.enrollment_count,
+        status: session.status,
+        date: session.date,
+        startTime: session.start_time,
+        endTime: session.end_time,
       },
     }
   })

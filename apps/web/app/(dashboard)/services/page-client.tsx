@@ -2,9 +2,27 @@
 
 import { useState, useTransition } from 'react'
 import { Plus } from 'lucide-react'
+import { toast } from 'sonner'
+import { useModuleStore } from '@/stores/module-store'
 import type { Service } from '@plio/db'
 import { ServiceTable } from '@/components/services/service-table'
 import { ServiceForm } from '@/components/services/service-form'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { createService, updateService, deleteService } from './actions'
 
 interface ServicesPageClientProps {
@@ -13,6 +31,7 @@ interface ServicesPageClientProps {
 }
 
 export function ServicesPageClient({ services, canWrite }: ServicesPageClientProps) {
+  const getModuleTitle = useModuleStore((s) => s.getModuleTitle)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingService, setEditingService] = useState<Service | null>(null)
   const [deletingService, setDeletingService] = useState<Service | null>(null)
@@ -36,7 +55,7 @@ export function ServicesPageClient({ services, canWrite }: ServicesPageClientPro
     startDeleteTransition(async () => {
       const result = await deleteService(deletingService.id)
       if (result.error) {
-        alert(result.error)
+        toast.error(result.error)
       }
       setDeletingService(null)
     })
@@ -46,7 +65,7 @@ export function ServicesPageClient({ services, canWrite }: ServicesPageClientPro
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Services</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{getModuleTitle('services')}</h1>
           <p className="text-sm text-gray-500 mt-1">
             Manage the services your business offers.
           </p>
@@ -69,59 +88,58 @@ export function ServicesPageClient({ services, canWrite }: ServicesPageClientPro
       />
 
       {/* Create Dialog */}
-      {showCreateDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-semibold mb-4">Create Service</h2>
-            <ServiceForm
-              onSubmit={handleCreate}
-              onCancel={() => setShowCreateDialog(false)}
-            />
-          </div>
-        </div>
-      )}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create Service</DialogTitle>
+          </DialogHeader>
+          <ServiceForm
+            onSubmit={handleCreate}
+            onCancel={() => setShowCreateDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
-      {editingService && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-semibold mb-4">Edit Service</h2>
+      <Dialog open={!!editingService} onOpenChange={(open) => !open && setEditingService(null)}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Service</DialogTitle>
+          </DialogHeader>
+          {editingService && (
             <ServiceForm
               service={editingService}
               onSubmit={handleUpdate}
               onCancel={() => setEditingService(null)}
             />
-          </div>
-        </div>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirm Dialog */}
-      {deletingService && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl">
-            <h2 className="text-lg font-semibold mb-2">Delete Service</h2>
-            <p className="text-sm text-gray-600 mb-6">
-              Are you sure you want to delete <strong>{deletingService.name}</strong>? This action
+      <AlertDialog open={!!deletingService} onOpenChange={(open) => !open && setDeletingService(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Service</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{deletingService?.name}</strong>? This action
               cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setDeletingService(null)}
-                className="border border-gray-300 px-4 py-2 rounded-md text-sm hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                disabled={isDeleting}
-                className="bg-red-600 text-white px-4 py-2 rounded-md text-sm hover:bg-red-700 disabled:opacity-50"
-              >
-                {isDeleting ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeletingService(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

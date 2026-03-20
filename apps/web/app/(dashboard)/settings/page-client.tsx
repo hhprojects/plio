@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useModuleStore } from '@/stores/module-store'
 import { BrandingForm } from '@/components/settings/branding-form'
 import { ModuleConfig } from '@/components/settings/module-config'
 
@@ -37,12 +38,13 @@ const tabs = ['Branding', 'Modules'] as const
 type Tab = (typeof tabs)[number]
 
 export function SettingsPageClient({ tenant, tenantModules }: SettingsPageClientProps) {
+  const getModuleTitle = useModuleStore((s) => s.getModuleTitle)
   const [activeTab, setActiveTab] = useState<Tab>('Branding')
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{getModuleTitle('settings')}</h1>
         <p className="mt-1 text-sm text-gray-500">
           Manage your branding and configure modules.
         </p>

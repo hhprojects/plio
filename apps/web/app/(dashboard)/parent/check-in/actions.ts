@@ -6,7 +6,7 @@ import { createHmac, randomBytes } from 'crypto'
 async function getParentProfile() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated', profile: null }
+  if (!user) return { error: 'Not authenticated', profile: null, email: null }
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -14,71 +14,80 @@ async function getParentProfile() {
     .eq('user_id', user.id)
     .single()
 
-  if (!profile || profile.role !== 'parent') {
-    return { error: 'Not a parent', profile: null }
+  if (!profile || profile.role !== 'client') {
+    return { error: 'Not a client', profile: null, email: null }
   }
 
-  return { error: null, profile }
+  return { error: null, profile, email: user.email! }
 }
 
 export async function getTodayEnrollments() {
-  const { profile, error } = await getParentProfile()
-  if (error || !profile) return { data: [], error }
+  const { profile, email, error } = await getParentProfile()
+  if (error || !profile || !email) return { data: [], error }
 
   const supabase = await createClient()
   const today = new Date().toISOString().split('T')[0]
 
-  // Get parent's children
-  const { data: children } = await supabase
-    .from('students')
-    .select('id, full_name')
+  // Find contact by email
+  const { data: contact } = await supabase
+    .from('contacts')
+    .select('id')
+    .eq('email', email)
     .eq('tenant_id', profile.tenant_id)
-    .eq('parent_id', profile.id)
-    .eq('is_active', true)
+    .single()
 
-  const studentIds = (children ?? []).map((c) => c.id)
-  if (studentIds.length === 0) return { data: [] }
+  if (!contact) return { data: [] }
+
+  // Get dependents
+  const { data: children } = await supabase
+    .from('contact_dependents')
+    .select('id, name')
+    .eq('contact_id', contact.id)
+    .eq('tenant_id', profile.tenant_id)
+
+  const dependentIds = (children ?? []).map((c) => c.id)
+  if (dependentIds.length === 0) return { data: [] }
 
   // Get today's enrollments
   const { data: enrollments } = await supabase
     .from('enrollments')
     .select(`
       id,
-      student_id,
+      dependent_id,
       status,
       checked_in_at,
-      class_instances!inner(
+      session:sessions!inner(
         id,
         date,
         start_time,
         end_time,
-        courses!inner(title, color_code)
+        service:services(name, color)
       )
     `)
-    .in('student_id', studentIds)
+    .in('dependent_id', dependentIds)
     .eq('tenant_id', profile.tenant_id)
     .in('status', ['confirmed', 'makeup'])
-    .eq('class_instances.date', today)
+    .eq('sessions.date', today)
 
   return {
     data: (enrollments ?? []).map((e) => {
-      const ci = e.class_instances as unknown as {
+      const session = e.session as unknown as {
         id: string
         date: string
         start_time: string
         end_time: string
-        courses: { title: string; color_code: string }
+        service: { name: string; color: string } | null
       }
       return {
         enrollmentId: e.id,
-        studentId: e.student_id,
-        studentName: (children ?? []).find((c) => c.id === e.student_id)?.full_name ?? 'Unknown',
-        classInstanceId: ci.id,
-        date: ci.date,
-        startTime: ci.start_time,
-        endTime: ci.end_time,
-        courseTitle: ci.courses?.title ?? 'Unknown',
-        courseColor: ci.courses?.color_code ?? '#6366f1',
+        dependentId: e.dependent_id,
+        dependentName: (children ?? []).find((c) => c.id === e.dependent_id)?.name ?? 'Unknown',
+        sessionId: session.id,
+        date: session.date,
+        startTime: session.start_time,
+        endTime: session.end_time,
+        serviceName: session.service?.name ?? 'Unknown',
+        serviceColor: session.service?.color ?? '#6366f1',
         checkedIn: !!e.checked_in_at,
       }
     }),
@@ -86,35 +95,45 @@ export async function getTodayEnrollments() {
 }
 
 export async function generateCheckInToken(enrollmentId: string) {
-  const { profile, error } = await getParentProfile()
-  if (error || !profile) return { token: null, error }
+  const { profile, email, error } = await getParentProfile()
+  if (error || !profile || !email) return { token: null, error }
 
   const supabase = await createClient()
 
-  // Verify enrollment belongs to parent's child
+  // Verify enrollment belongs to parent's dependent
   const { data: enrollment } = await supabase
     .from('enrollments')
-    .select('id, student_id, class_instance_id')
+    .select('id, dependent_id, session_id')
     .eq('id', enrollmentId)
     .eq('tenant_id', profile.tenant_id)
     .single()
 
   if (!enrollment) return { token: null, error: 'Enrollment not found' }
 
-  // Verify student belongs to parent
-  const { data: student } = await supabase
-    .from('students')
+  // Find contact by email
+  const { data: contact } = await supabase
+    .from('contacts')
     .select('id')
-    .eq('id', enrollment.student_id)
-    .eq('parent_id', profile.id)
+    .eq('email', email)
+    .eq('tenant_id', profile.tenant_id)
     .single()
 
-  if (!student) return { token: null, error: 'Not authorized' }
+  if (!contact) return { token: null, error: 'Not authorized' }
+
+  // Verify dependent belongs to this contact
+  const { data: dependent } = await supabase
+    .from('contact_dependents')
+    .select('id')
+    .eq('id', enrollment.dependent_id)
+    .eq('contact_id', contact.id)
+    .single()
+
+  if (!dependent) return { token: null, error: 'Not authorized' }
 
   // Generate signed token
   const nonce = randomBytes(8).toString('hex')
   const timestamp = Date.now()
-  const payload = `${enrollment.id}:${enrollment.student_id}:${enrollment.class_instance_id}:${timestamp}:${nonce}`
+  const payload = `${enrollment.id}:${enrollment.dependent_id}:${enrollment.session_id}:${timestamp}:${nonce}`
   const secret = process.env.CHECKIN_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || 'plio-checkin-secret'
   const signature = createHmac('sha256', secret).update(payload).digest('hex').slice(0, 16)
   const token = `${payload}:${signature}`
@@ -129,10 +148,10 @@ export async function verifyCheckIn(token: string) {
   const parts = token.split(':')
   if (parts.length !== 6) return { error: 'Invalid token format' }
 
-  const [enrollmentId, studentId, classInstanceId, timestampStr, nonce, signature] = parts
+  const [enrollmentId, dependentId, sessionId, timestampStr, nonce, signature] = parts
 
   // Verify signature
-  const payload = `${enrollmentId}:${studentId}:${classInstanceId}:${timestampStr}:${nonce}`
+  const payload = `${enrollmentId}:${dependentId}:${sessionId}:${timestampStr}:${nonce}`
   const secret = process.env.CHECKIN_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || 'plio-checkin-secret'
   const expectedSig = createHmac('sha256', secret).update(payload).digest('hex').slice(0, 16)
 
@@ -147,7 +166,7 @@ export async function verifyCheckIn(token: string) {
   // Fetch enrollment
   const { data: enrollment } = await supabase
     .from('enrollments')
-    .select('id, status, checked_in_at, student_id, class_instance_id')
+    .select('id, status, checked_in_at, dependent_id, session_id')
     .eq('id', enrollmentId)
     .single()
 
@@ -165,24 +184,24 @@ export async function verifyCheckIn(token: string) {
 
   if (updateError) return { error: updateError.message }
 
-  // Fetch student name for confirmation
-  const { data: student } = await supabase
-    .from('students')
-    .select('full_name')
-    .eq('id', studentId)
+  // Fetch dependent name for confirmation
+  const { data: dependent } = await supabase
+    .from('contact_dependents')
+    .select('name')
+    .eq('id', dependentId)
     .single()
 
-  const { data: ci } = await supabase
-    .from('class_instances')
-    .select('courses!inner(title)')
-    .eq('id', classInstanceId)
+  const { data: session } = await supabase
+    .from('sessions')
+    .select('service:services(name)')
+    .eq('id', sessionId)
     .single()
 
-  const courseName = (ci?.courses as unknown as { title: string })?.title ?? 'class'
+  const serviceName = (session?.service as unknown as { name: string })?.name ?? 'class'
 
   return {
     success: true,
-    studentName: student?.full_name ?? 'Student',
-    courseName,
+    dependentName: dependent?.name ?? 'Student',
+    serviceName,
   }
 }

@@ -2,10 +2,35 @@
 
 import { useState, useTransition } from 'react'
 import { Plus } from 'lucide-react'
+import { toast } from 'sonner'
+import { useModuleStore } from '@/stores/module-store'
 import type { TeamMember, TeamAvailability } from '@plio/db'
 import { TeamTable } from '@/components/team/team-table'
 import { TeamForm } from '@/components/team/team-form'
 import { AvailabilityForm } from '@/components/team/availability-form'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 import { createTeamMember, updateTeamMember, deleteTeamMember, updateAvailability } from './actions'
 
 type TeamMemberWithAvailability = TeamMember & {
@@ -18,6 +43,7 @@ interface TeamPageClientProps {
 }
 
 export function TeamPageClient({ members, canWrite }: TeamPageClientProps) {
+  const getModuleTitle = useModuleStore((s) => s.getModuleTitle)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingMember, setEditingMember] = useState<TeamMemberWithAvailability | null>(null)
   const [showAvailabilitySheet, setShowAvailabilitySheet] = useState<TeamMemberWithAvailability | null>(null)
@@ -42,7 +68,7 @@ export function TeamPageClient({ members, canWrite }: TeamPageClientProps) {
     startDeleteTransition(async () => {
       const result = await deleteTeamMember(deletingMember.id)
       if (result.error) {
-        alert(result.error)
+        toast.error(result.error)
       }
       setDeletingMember(null)
     })
@@ -61,7 +87,7 @@ export function TeamPageClient({ members, canWrite }: TeamPageClientProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Team</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{getModuleTitle('team')}</h1>
           <p className="text-sm text-gray-500 mt-1">
             Manage your team members and their availability.
           </p>
@@ -85,90 +111,77 @@ export function TeamPageClient({ members, canWrite }: TeamPageClientProps) {
       />
 
       {/* Create Dialog */}
-      {showCreateDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-semibold mb-4">Add Team Member</h2>
-            <TeamForm
-              onSubmit={handleCreate}
-              onCancel={() => setShowCreateDialog(false)}
-            />
-          </div>
-        </div>
-      )}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add Team Member</DialogTitle>
+          </DialogHeader>
+          <TeamForm
+            onSubmit={handleCreate}
+            onCancel={() => setShowCreateDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
-      {editingMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-semibold mb-4">Edit Team Member</h2>
+      <Dialog open={!!editingMember} onOpenChange={(open) => !open && setEditingMember(null)}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Team Member</DialogTitle>
+          </DialogHeader>
+          {editingMember && (
             <TeamForm
               member={editingMember}
               onSubmit={handleUpdate}
               onCancel={() => setEditingMember(null)}
             />
-          </div>
-        </div>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirm Dialog */}
-      {deletingMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl">
-            <h2 className="text-lg font-semibold mb-2">Delete Team Member</h2>
-            <p className="text-sm text-gray-600 mb-6">
-              Are you sure you want to delete <strong>{deletingMember.name}</strong>? This action
+      <AlertDialog open={!!deletingMember} onOpenChange={(open) => !open && setDeletingMember(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Team Member</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{deletingMember?.name}</strong>? This action
               cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setDeletingMember(null)}
-                className="border border-gray-300 px-4 py-2 rounded-md text-sm hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                disabled={isDeleting}
-                className="bg-red-600 text-white px-4 py-2 rounded-md text-sm hover:bg-red-700 disabled:opacity-50"
-              >
-                {isDeleting ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeletingMember(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Availability Side Panel */}
-      {showAvailabilitySheet && (
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-black/30"
-            onClick={() => setShowAvailabilitySheet(null)}
-          />
-          <div className="fixed inset-y-0 right-0 z-50 w-[400px] bg-white shadow-xl border-l overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-lg font-semibold">Availability</h2>
-                  <p className="text-sm text-gray-500">{showAvailabilitySheet.name}</p>
-                </div>
-                <button
-                  onClick={() => setShowAvailabilitySheet(null)}
-                  className="text-gray-400 hover:text-gray-600 text-xl leading-none"
-                >
-                  &times;
-                </button>
-              </div>
+      <Sheet open={!!showAvailabilitySheet} onOpenChange={(open) => !open && setShowAvailabilitySheet(null)}>
+        <SheetContent className="w-[400px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Availability</SheetTitle>
+            <SheetDescription>{showAvailabilitySheet?.name}</SheetDescription>
+          </SheetHeader>
+          {showAvailabilitySheet && (
+            <div className="pt-4">
               <AvailabilityForm
                 availability={showAvailabilitySheet.team_availability}
                 onSave={handleSaveAvailability}
                 onCancel={() => setShowAvailabilitySheet(null)}
               />
             </div>
-          </div>
-        </>
-      )}
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

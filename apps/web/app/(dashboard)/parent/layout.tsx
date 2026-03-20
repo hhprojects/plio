@@ -22,7 +22,7 @@ export default async function ParentLayout({
     .eq("user_id", user.id)
     .single();
 
-  if (!profile || profile.role !== "parent") {
+  if (!profile || profile.role !== "client") {
     redirect("/admin");
   }
 

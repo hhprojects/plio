@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 async function getParentProfile() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated', profile: null }
+  if (!user) return { error: 'Not authenticated', profile: null, user: null }
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -13,115 +13,117 @@ async function getParentProfile() {
     .eq('user_id', user.id)
     .single()
 
-  if (!profile || profile.role !== 'parent') {
-    return { error: 'Not a parent', profile: null }
+  if (!profile || profile.role !== 'client') {
+    return { error: 'Not a client', profile: null, user: null }
   }
 
-  return { error: null, profile }
+  return { error: null, profile, user }
 }
 
 export async function getParentDashboardData() {
-  const { profile, error } = await getParentProfile()
-  if (error || !profile) return { error, data: null }
+  const { profile, user, error } = await getParentProfile()
+  if (error || !profile || !user) return { error, data: null }
 
   const supabase = await createClient()
   const tenantId = profile.tenant_id
 
-  // 1. Fetch children
-  const { data: children } = await supabase
-    .from('students')
-    .select('id, full_name, is_active')
+  // 1. Find contact record by email
+  const { data: contact } = await supabase
+    .from('contacts')
+    .select('id')
     .eq('tenant_id', tenantId)
-    .eq('parent_id', profile.id)
-    .eq('is_active', true)
-    .order('full_name')
+    .eq('email', user.email!)
+    .single()
 
-  const studentIds = (children ?? []).map((c) => c.id)
-
-  if (studentIds.length === 0) {
+  if (!contact) {
     return {
       data: {
         children: [],
         nextClasses: [],
-        creditBalances: {},
         recentActivity: [],
       },
     }
   }
 
-  // 2. Fetch upcoming enrollments (next class per student)
+  // 2. Fetch dependents
+  const { data: dependents } = await supabase
+    .from('contact_dependents')
+    .select('id, name')
+    .eq('contact_id', contact.id)
+    .order('name')
+
+  const dependentIds = (dependents ?? []).map((d) => d.id)
+
+  if (dependentIds.length === 0) {
+    return {
+      data: {
+        children: [],
+        nextClasses: [],
+        recentActivity: [],
+      },
+    }
+  }
+
+  // 3. Fetch upcoming enrollments (next class per dependent)
   const today = new Date().toISOString().split('T')[0]
   const { data: upcomingEnrollments } = await supabase
     .from('enrollments')
     .select(`
       id,
-      student_id,
+      dependent_id,
       status,
-      class_instances!inner(
+      session:sessions!inner(
         id,
         date,
         start_time,
         end_time,
         status,
-        courses!inner(title, color_code),
-        tutor:profiles!class_instances_tutor_id_fkey(full_name),
+        service:services(name, color),
+        team_member:team_members(name),
         room:rooms(name)
       )
     `)
-    .in('student_id', studentIds)
+    .in('dependent_id', dependentIds)
     .eq('tenant_id', tenantId)
     .in('status', ['confirmed', 'makeup'])
-    .gte('class_instances.date', today)
-    .eq('class_instances.status', 'scheduled')
-    .order('class_instances(date)', { ascending: true })
+    .gte('sessions.date', today)
+    .eq('sessions.status', 'scheduled')
+    .order('sessions(date)', { ascending: true })
     .limit(10)
 
-  // Group by student, take first per student
+  // Group by dependent, take first per dependent
   const nextClassMap: Record<string, {
     enrollmentId: string
     date: string
     startTime: string
     endTime: string
-    courseTitle: string
-    courseColor: string
-    tutorName: string
+    serviceName: string
+    serviceColor: string
+    teamMemberName: string
     roomName: string | null
   }> = {}
 
   for (const e of upcomingEnrollments ?? []) {
-    if (nextClassMap[e.student_id]) continue
-    const ci = e.class_instances as unknown as {
+    if (nextClassMap[e.dependent_id]) continue
+    const s = e.session as unknown as {
       id: string
       date: string
       start_time: string
       end_time: string
-      courses: { title: string; color_code: string }
-      tutor: { full_name: string } | null
+      service: { name: string; color: string } | null
+      team_member: { name: string } | null
       room: { name: string } | null
     }
-    nextClassMap[e.student_id] = {
+    nextClassMap[e.dependent_id] = {
       enrollmentId: e.id,
-      date: ci.date,
-      startTime: ci.start_time,
-      endTime: ci.end_time,
-      courseTitle: ci.courses?.title ?? 'Unknown',
-      courseColor: ci.courses?.color_code ?? '#6366f1',
-      tutorName: ci.tutor?.full_name ?? 'TBD',
-      roomName: ci.room?.name ?? null,
+      date: s.date,
+      startTime: s.start_time,
+      endTime: s.end_time,
+      serviceName: s.service?.name ?? 'Unknown',
+      serviceColor: s.service?.color ?? '#6366f1',
+      teamMemberName: s.team_member?.name ?? 'TBD',
+      roomName: s.room?.name ?? null,
     }
-  }
-
-  // 3. Fetch credit balances
-  const { data: creditData } = await supabase
-    .from('credit_ledger')
-    .select('student_id, amount')
-    .in('student_id', studentIds)
-    .eq('tenant_id', tenantId)
-
-  const creditBalances: Record<string, number> = {}
-  for (const entry of creditData ?? []) {
-    creditBalances[entry.student_id] =
-      (creditBalances[entry.student_id] ?? 0) + entry.amount
   }
 
   // 4. Fetch recent notifications
@@ -135,16 +137,15 @@ export async function getParentDashboardData() {
 
   return {
     data: {
-      children: (children ?? []).map((c) => ({
-        id: c.id,
-        fullName: c.full_name,
+      children: (dependents ?? []).map((d) => ({
+        id: d.id,
+        fullName: d.name,
       })),
-      nextClasses: Object.entries(nextClassMap).map(([studentId, cls]) => ({
-        studentId,
-        studentName: (children ?? []).find((c) => c.id === studentId)?.full_name ?? 'Unknown',
+      nextClasses: Object.entries(nextClassMap).map(([dependentId, cls]) => ({
+        dependentId,
+        dependentName: (dependents ?? []).find((d) => d.id === dependentId)?.name ?? 'Unknown',
         ...cls,
       })),
-      creditBalances,
       recentActivity: (notifications ?? []).map((n) => ({
         id: n.id,
         type: n.type,

@@ -2,6 +2,7 @@
 
 import { useCallback, useState, useTransition } from 'react'
 import { Plus } from 'lucide-react'
+import { useModuleStore } from '@/stores/module-store'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -31,6 +32,7 @@ interface RoomsPageClientProps {
 }
 
 export function RoomsPageClient({ initialRooms }: RoomsPageClientProps) {
+  const getModuleTitle = useModuleStore((s) => s.getModuleTitle)
   const [rooms] = useState<RoomWithDetails[]>(initialRooms)
   const [, startTransition] = useTransition()
 
@@ -88,7 +90,7 @@ export function RoomsPageClient({ initialRooms }: RoomsPageClientProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Rooms</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{getModuleTitle('rooms')}</h1>
           <p className="text-muted-foreground mt-1">
             Manage your rooms, capacity, and daily utilization.
           </p>

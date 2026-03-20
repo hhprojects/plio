@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { getTenantId } from '@/lib/auth/cached'
 import { generateClassInstances } from '@/lib/scheduling/generate-instances'
 
 // ---------------------------------------------------------------------------
@@ -52,27 +53,11 @@ export async function createRecurringSchedule(formData: FormData) {
   const data = parsed.data
 
   // 2. Auth — get user and tenant
+  const auth = await getTenantId()
+  if (auth.error || !auth.tenantId) return { error: auth.error ?? 'Not authenticated' }
+  const tenantId = auth.tenantId
+
   const supabase = await createClient()
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    return { error: 'Not authenticated' }
-  }
-
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('tenant_id')
-    .eq('user_id', user.id)
-    .single()
-
-  if (profileError || !profile) {
-    return { error: 'Profile not found' }
-  }
-
-  const tenantId = profile.tenant_id
 
   // 3. Fetch holidays for the tenant
   const { data: holidays } = await supabase
@@ -168,26 +153,12 @@ export async function getRecurringSchedules(): Promise<{
   data: ScheduleWithDetails[]
   error?: string
 }> {
+  const auth = await getTenantId()
+  if (auth.error || !auth.tenantId) {
+    return { data: [], error: auth.error ?? 'Not authenticated' }
+  }
+
   const supabase = await createClient()
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    return { data: [], error: 'Not authenticated' }
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('tenant_id')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!profile) {
-    return { data: [], error: 'Profile not found' }
-  }
 
   const { data: schedules, error: queryError } = await supabase
     .from('schedules')
@@ -208,7 +179,7 @@ export async function getRecurringSchedules(): Promise<{
       rooms(name)
     `
     )
-    .eq('tenant_id', profile.tenant_id)
+    .eq('tenant_id', auth.tenantId)
     .order('effective_from', { ascending: false })
 
   if (queryError) {
@@ -246,26 +217,10 @@ export async function getRecurringSchedules(): Promise<{
 // ---------------------------------------------------------------------------
 
 export async function deleteRecurringSchedule(scheduleId: string) {
+  const auth = await getTenantId()
+  if (auth.error || !auth.tenantId) return { error: auth.error ?? 'Not authenticated' }
+
   const supabase = await createClient()
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    return { error: 'Not authenticated' }
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('tenant_id')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!profile) {
-    return { error: 'Profile not found' }
-  }
 
   // Delete future sessions linked to this schedule
   const today = new Date().toISOString().split('T')[0]
@@ -273,7 +228,7 @@ export async function deleteRecurringSchedule(scheduleId: string) {
     .from('sessions')
     .delete()
     .eq('schedule_id', scheduleId)
-    .eq('tenant_id', profile.tenant_id)
+    .eq('tenant_id', auth.tenantId)
     .gte('date', today!)
 
   // Delete the schedule itself
@@ -281,7 +236,7 @@ export async function deleteRecurringSchedule(scheduleId: string) {
     .from('schedules')
     .delete()
     .eq('id', scheduleId)
-    .eq('tenant_id', profile.tenant_id)
+    .eq('tenant_id', auth.tenantId)
 
   if (deleteError) {
     return { error: deleteError.message }

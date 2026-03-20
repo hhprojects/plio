@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useCalendarStore } from '@/stores/calendar-store'
+import { useModuleStore } from '@/stores/module-store'
 import { CalendarView } from '@/components/calendar/calendar-view'
 import { SessionDetail } from '@/components/calendar/session-detail'
 import { RecurringClassForm } from '@/components/calendar/recurring-class-form'
@@ -79,6 +80,7 @@ export function CalendarPageClient({
   calendarConfig,
   role,
 }: CalendarPageClientProps) {
+  const getModuleTitle = useModuleStore((s) => s.getModuleTitle)
   const [showRecurringForm, setShowRecurringForm] = useState(false)
   const [showAppointmentForm, setShowAppointmentForm] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | undefined>()
@@ -190,7 +192,7 @@ export function CalendarPageClient({
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Calendar className="h-6 w-6 text-indigo-600" />
-            Calendar
+            {getModuleTitle('calendar')}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
             View and manage your schedule.

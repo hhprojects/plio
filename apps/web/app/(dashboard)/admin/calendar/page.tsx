@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
-import { getClassInstances, getHolidays } from './actions'
+import { requireRole } from '@/lib/auth/module-guard'
+import { getSessions, getHolidays } from './actions'
 import { CalendarView } from '@/components/admin/calendar/calendar-view'
 import { CalendarSkeleton } from '@/components/ui/table-skeleton'
 
@@ -20,6 +21,7 @@ export default function CalendarPage() {
 }
 
 async function CalendarData() {
+  await requireRole(['admin', 'super_admin'])
   const today = new Date()
   const from = new Date(today)
   from.setDate(from.getDate() - 14)
@@ -30,7 +32,7 @@ async function CalendarData() {
   const dateTo = to.toISOString().substring(0, 10)
 
   const [instancesResult, holidaysResult] = await Promise.all([
-    getClassInstances(dateFrom, dateTo),
+    getSessions(dateFrom, dateTo),
     getHolidays(dateFrom, dateTo),
   ])
 

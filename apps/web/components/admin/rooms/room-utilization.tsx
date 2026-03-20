@@ -133,7 +133,7 @@ export function RoomUtilization({ roomId, roomName }: RoomUtilizationProps) {
             return (
               <div
                 key={hour}
-                className="absolute left-0 right-0 border-t border-dashed border-gray-200"
+                className="absolute left-0 right-0 border-t border-dashed border-border"
                 style={{ top: `${top}%` }}
               >
                 <span className="text-muted-foreground absolute -top-2.5 left-1 text-[10px]">
@@ -164,14 +164,14 @@ export function RoomUtilization({ roomId, roomName }: RoomUtilizationProps) {
                   style={{
                     top: `${top}%`,
                     height: `${height}%`,
-                    backgroundColor: slot.colorCode,
+                    backgroundColor: slot.color,
                     minHeight: '24px',
                   }}
                 >
                   <div className="font-medium truncate">
-                    {slot.courseTitle}
+                    {slot.serviceName}
                   </div>
-                  <div className="truncate opacity-90">{slot.tutorName}</div>
+                  <div className="truncate opacity-90">{slot.teamMemberName}</div>
                   <div className="truncate opacity-80">
                     {formatTime(slot.startTime)} &ndash;{' '}
                     {formatTime(slot.endTime)}

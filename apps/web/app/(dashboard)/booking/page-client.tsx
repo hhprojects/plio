@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useMemo } from 'react'
+import { useModuleStore } from '@/stores/module-store'
 import {
   Search,
   MoreHorizontal,
@@ -99,6 +100,7 @@ export function BookingPageClient({
   availability,
   canWrite,
 }: BookingPageClientProps) {
+  const getModuleTitle = useModuleStore((s) => s.getModuleTitle)
   const [activeTab, setActiveTab] = useState<'bookings' | 'settings'>('bookings')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [search, setSearch] = useState('')
@@ -205,7 +207,7 @@ export function BookingPageClient({
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Booking</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{getModuleTitle('booking')}</h1>
         <p className="text-sm text-gray-500 mt-1">
           Manage appointments and configure your public booking page.
         </p>

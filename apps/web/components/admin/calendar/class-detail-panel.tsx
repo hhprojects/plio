@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { useCalendarStore } from '@/stores/calendar-store'
-import { cancelClassInstance } from '@/app/(dashboard)/admin/calendar/actions'
+import { cancelSession } from '@/app/(dashboard)/admin/calendar/actions'
 import { toast } from 'sonner'
 import { Clock, MapPin, User, Users, XCircle } from 'lucide-react'
 
@@ -59,9 +59,7 @@ export function ClassDetailPanel({ onCancelled }: ClassDetailPanelProps) {
   const [cancelReason, setCancelReason] = useState('')
   const [isPending, startTransition] = useTransition()
 
-  // The selected instance might be the raw ClassInstance or the extendedProps from FullCalendar
-  // We store extendedProps-style data in the store via selectInstance
-  const instance = selectedInstance as Record<string, unknown> | null
+  const instance = selectedInstance
 
   if (!instance) {
     return (
@@ -76,17 +74,17 @@ export function ClassDetailPanel({ onCancelled }: ClassDetailPanelProps) {
     )
   }
 
-  const title = (instance.courseTitle as string) ?? 'Untitled Class'
-  const date = (instance.date as string) ?? ''
-  const startTime = (instance.startTime as string) ?? ''
-  const endTime = (instance.endTime as string) ?? ''
-  const tutorName = (instance.tutorName as string) ?? 'Unassigned'
-  const roomName = (instance.roomName as string | null) ?? null
-  const status = (instance.status as string) ?? 'scheduled'
-  const enrollmentCount = (instance.enrollmentCount as number) ?? 0
-  const maxCapacity = (instance.maxCapacity as number) ?? 0
-  const overrideNotes = (instance.overrideNotes as string | null) ?? null
-  const instanceId = (instance.instanceId as string) ?? (instance.id as string) ?? ''
+  const title = instance.courseTitle ?? 'Untitled Class'
+  const date = instance.date ?? ''
+  const startTime = instance.startTime ?? ''
+  const endTime = instance.endTime ?? ''
+  const tutorName = instance.tutorName ?? 'Unassigned'
+  const roomName = instance.roomName ?? null
+  const status = instance.status ?? 'scheduled'
+  const enrollmentCount = instance.enrollmentCount ?? 0
+  const maxCapacity = instance.maxCapacity ?? 0
+  const overrideNotes = instance.overrideNotes ?? null
+  const instanceId = instance.sessionId ?? instance.instanceId ?? instance.id ?? ''
 
   const isCancelled = status === 'cancelled'
 
@@ -102,8 +100,8 @@ export function ClassDetailPanel({ onCancelled }: ClassDetailPanelProps) {
     }
 
     startTransition(async () => {
-      const result = await cancelClassInstance({
-        classInstanceId: instanceId,
+      const result = await cancelSession({
+        sessionId: instanceId,
         reason: cancelReason.trim(),
       })
 

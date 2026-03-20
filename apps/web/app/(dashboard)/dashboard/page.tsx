@@ -14,7 +14,7 @@ export default async function DashboardPage() {
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-    const [tenantsRes, profilesRes, recentRes, pendingRes] = await Promise.all([
+    const [tenantsRes, profilesRes, recentRes, pendingRes] = await Promise.allSettled([
       adminSupabase.from('tenants').select('id', { count: 'exact', head: true }),
       adminSupabase.from('profiles').select('id', { count: 'exact', head: true }),
       adminSupabase
@@ -27,13 +27,16 @@ export default async function DashboardPage() {
         .eq('status', 'pending'),
     ])
 
+    const settledCount = (r: PromiseSettledResult<{ count: number | null }>) =>
+      r.status === 'fulfilled' ? r.value.count ?? 0 : 0
+
     return (
       <DashboardPageClient
         role="super_admin"
-        totalTenants={tenantsRes.count ?? 0}
-        totalUsers={profilesRes.count ?? 0}
-        recentSignups={recentRes.count ?? 0}
-        pendingWaitlist={pendingRes.count ?? 0}
+        totalTenants={settledCount(tenantsRes)}
+        totalUsers={settledCount(profilesRes)}
+        recentSignups={settledCount(recentRes)}
+        pendingWaitlist={settledCount(pendingRes)}
       />
     )
   }
@@ -86,7 +89,7 @@ export default async function DashboardPage() {
         contactsCount={myContactsCount ?? 0}
         servicesCount={uniqueServiceIds.size}
         teamCount={0}
-        role={auth.role as 'admin' | 'staff' | 'client'}
+        role={auth.role as 'staff' | 'client'}
       />
     )
   }
@@ -159,33 +162,162 @@ export default async function DashboardPage() {
         contactsCount={dependentCount}
         servicesCount={todaySessions.length}
         teamCount={invoiceCount ?? 0}
-        role={auth.role as 'admin' | 'staff' | 'client'}
+        role={auth.role as 'staff' | 'client'}
       />
     )
   }
 
   // Admin: show all tenant data
-  const { data: todaySessions } = await supabase
-    .from('sessions')
-    .select('*, service:services(name, color), team_member:team_members(name)')
-    .eq('tenant_id', auth.tenantId)
-    .eq('date', today)
-    .neq('status', 'cancelled')
-    .order('start_time')
+  const now = new Date()
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString()
+  const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59).toISOString()
 
-  const [contactsResult, servicesResult, teamResult] = await Promise.all([
+  const dayOfWeek = now.getDay()
+  const startOfWeek = new Date(now)
+  startOfWeek.setDate(now.getDate() - dayOfWeek)
+  startOfWeek.setHours(0, 0, 0, 0)
+  const startOfLastWeek = new Date(startOfWeek)
+  startOfLastWeek.setDate(startOfLastWeek.getDate() - 7)
+  const endOfLastWeek = new Date(startOfWeek)
+  endOfLastWeek.setMilliseconds(-1)
+
+  const threeDaysFromNow = new Date(now)
+  threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3)
+
+  const [
+    todaySessionsResult,
+    contactsResult, servicesResult, teamResult,
+    overdueInvoicesResult, expiringInvitationsResult,
+    revenueThisMonthResult, revenueLastMonthResult,
+    activeClientsResult, activeClientsLastMonthResult,
+    sessionsThisWeekResult, sessionsLastWeekResult,
+    newSessionsThisWeekResult, newSessionsLastWeekResult,
+    auditLogResult,
+  ] = await Promise.allSettled([
+    supabase
+      .from('sessions')
+      .select('*, service:services(name, color), team_member:team_members(name)')
+      .eq('tenant_id', auth.tenantId)
+      .eq('date', today)
+      .neq('status', 'cancelled')
+      .order('start_time'),
     supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('tenant_id', auth.tenantId),
     supabase.from('services').select('id', { count: 'exact', head: true }).eq('tenant_id', auth.tenantId).eq('active', true),
     supabase.from('team_members').select('id', { count: 'exact', head: true }).eq('tenant_id', auth.tenantId),
+    // Alerts
+    supabase
+      .from('invoices')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', auth.tenantId)
+      .eq('status', 'overdue'),
+    supabase
+      .from('invitations')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', auth.tenantId)
+      .eq('status', 'pending')
+      .lte('expires_at', threeDaysFromNow.toISOString()),
+    // Revenue trends
+    supabase
+      .from('payments')
+      .select('amount')
+      .eq('tenant_id', auth.tenantId)
+      .eq('status', 'verified')
+      .gte('created_at', startOfMonth),
+    supabase
+      .from('payments')
+      .select('amount')
+      .eq('tenant_id', auth.tenantId)
+      .eq('status', 'verified')
+      .gte('created_at', startOfLastMonth)
+      .lte('created_at', endOfLastMonth),
+    // Active clients
+    supabase
+      .from('contacts')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', auth.tenantId)
+      .eq('is_active', true),
+    supabase
+      .from('contacts')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', auth.tenantId)
+      .eq('is_active', true)
+      .lte('created_at', endOfLastMonth),
+    // Sessions this week vs last week
+    supabase
+      .from('sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', auth.tenantId)
+      .neq('status', 'cancelled')
+      .gte('date', startOfWeek.toISOString().split('T')[0]),
+    supabase
+      .from('sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', auth.tenantId)
+      .neq('status', 'cancelled')
+      .gte('date', startOfLastWeek.toISOString().split('T')[0])
+      .lte('date', endOfLastWeek.toISOString().split('T')[0]),
+    // New sessions created this week vs last week
+    supabase
+      .from('sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', auth.tenantId)
+      .gte('created_at', startOfWeek.toISOString()),
+    supabase
+      .from('sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', auth.tenantId)
+      .gte('created_at', startOfLastWeek.toISOString())
+      .lte('created_at', endOfLastWeek.toISOString()),
+    // Activity feed
+    supabase
+      .from('audit_log')
+      .select('id, action, entity_type, created_at, actor:profiles!audit_log_actor_id_fkey(full_name)')
+      .eq('tenant_id', auth.tenantId)
+      .order('created_at', { ascending: false })
+      .limit(10),
   ])
+
+  // Safe extractors for settled results
+  const getData = <T,>(r: PromiseSettledResult<{ data: T | null }>, fallback: T): T =>
+    r.status === 'fulfilled' ? r.value.data ?? fallback : fallback
+  const getCount = (r: PromiseSettledResult<{ count: number | null }>): number =>
+    r.status === 'fulfilled' ? r.value.count ?? 0 : 0
+
+  const sumAmounts = (rows: { amount: number }[]) =>
+    rows.reduce((sum, r) => sum + Number(r.amount), 0)
+
+  const todaySessions = getData(todaySessionsResult, [] as any[])
+  const auditLog = getData(auditLogResult, [] as any[])
 
   return (
     <DashboardPageClient
-      todaySessions={todaySessions ?? []}
-      contactsCount={contactsResult.count ?? 0}
-      servicesCount={servicesResult.count ?? 0}
-      teamCount={teamResult.count ?? 0}
-      role={auth.role as 'admin' | 'staff' | 'client'}
+      todaySessions={todaySessions}
+      contactsCount={getCount(contactsResult)}
+      servicesCount={getCount(servicesResult)}
+      teamCount={getCount(teamResult)}
+      role="admin"
+      alerts={{
+        overdueInvoices: getCount(overdueInvoicesResult),
+        expiringInvitations: getCount(expiringInvitationsResult),
+      }}
+      trends={{
+        revenueThisMonth: sumAmounts(getData(revenueThisMonthResult, [])),
+        revenueLastMonth: sumAmounts(getData(revenueLastMonthResult, [])),
+        activeClients: getCount(activeClientsResult),
+        activeClientsLastMonth: getCount(activeClientsLastMonthResult),
+        sessionsThisWeek: getCount(sessionsThisWeekResult),
+        sessionsLastWeek: getCount(sessionsLastWeekResult),
+        newSessionsThisWeek: getCount(newSessionsThisWeekResult),
+        newSessionsLastWeek: getCount(newSessionsLastWeekResult),
+      }}
+      recentActivity={auditLog.map((entry: any) => ({
+        id: entry.id,
+        action: entry.action,
+        entity_type: entry.entity_type,
+        actor_name: entry.actor?.full_name ?? 'System',
+        created_at: entry.created_at,
+      }))}
     />
   )
 }

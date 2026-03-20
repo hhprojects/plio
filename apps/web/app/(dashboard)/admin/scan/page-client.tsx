@@ -29,10 +29,10 @@ export function ScanPageClient() {
       } else {
         setResult({
           success: true,
-          studentName: res.studentName,
-          courseName: res.courseName,
+          studentName: res.dependentName,
+          courseName: res.serviceName,
         })
-        toast.success(`${res.studentName} checked in!`)
+        toast.success(`${res.dependentName} checked in!`)
         setToken('')
       }
     })

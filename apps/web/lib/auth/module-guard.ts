@@ -9,7 +9,7 @@ import { notFound } from 'next/navigation'
 export async function requireModule(slug: string) {
   const { modules, error } = await getTenantModules()
   if (error) notFound()
-  const mod = modules.find((m: any) => m.module?.slug === slug)
+  const mod = modules.find((m: { module?: { slug: string } | null }) => m.module?.slug === slug)
   if (!mod || !mod.enabled) notFound()
   return mod
 }

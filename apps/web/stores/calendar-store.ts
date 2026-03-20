@@ -1,5 +1,23 @@
 import { create } from 'zustand'
 
+export interface CalendarInstanceData {
+  id: string
+  sessionId: string
+  courseTitle: string
+  date: string
+  startTime: string
+  endTime: string
+  tutorName: string
+  tutorId: string
+  roomName: string | null
+  roomId: string | null
+  enrollmentCount: number
+  status: string
+  maxCapacity?: number
+  overrideNotes?: string | null
+  instanceId?: string
+}
+
 export interface CalendarStoreState {
   view: 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'
   currentDate: Date
@@ -12,11 +30,11 @@ export interface CalendarStoreState {
   }
   // Detail panel state
   isDetailPanelOpen: boolean
-  selectedInstance: Record<string, unknown> | null
+  selectedInstance: CalendarInstanceData | null
   setView: (view: CalendarStoreState['view']) => void
   setCurrentDate: (date: Date) => void
   selectSession: (id: string | null) => void
-  selectInstance: (instance: Record<string, unknown> | null) => void
+  selectInstance: (instance: CalendarInstanceData | null) => void
   toggleDetailPanel: (open?: boolean) => void
   setColorBy: (colorBy: 'service' | 'team_member') => void
   setFilters: (filters: CalendarStoreState['filters']) => void

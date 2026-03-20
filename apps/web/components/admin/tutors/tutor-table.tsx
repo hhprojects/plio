@@ -159,27 +159,27 @@ export function TutorTable({ tutors, onView }: TutorTableProps) {
             </TableCell>
             <TableCell>
               <div className="flex flex-wrap gap-1">
-                {tutor.assignedCourses.length === 0 ? (
+                {tutor.assignedServices.length === 0 ? (
                   <span className="text-muted-foreground text-xs">None</span>
                 ) : (
                   <>
-                    {tutor.assignedCourses.slice(0, 3).map((course) => (
+                    {tutor.assignedServices.slice(0, 3).map((svc: { id: string; name: string; color: string }) => (
                       <Badge
-                        key={course.id}
+                        key={svc.id}
                         variant="secondary"
                         className="text-xs"
                         style={{
-                          backgroundColor: course.colorCode + '20',
-                          color: course.colorCode,
-                          borderColor: course.colorCode + '40',
+                          backgroundColor: svc.color + '20',
+                          color: svc.color,
+                          borderColor: svc.color + '40',
                         }}
                       >
-                        {course.title}
+                        {svc.name}
                       </Badge>
                     ))}
-                    {tutor.assignedCourses.length > 3 && (
+                    {tutor.assignedServices.length > 3 && (
                       <Badge variant="secondary" className="text-xs">
-                        +{tutor.assignedCourses.length - 3} more
+                        +{tutor.assignedServices.length - 3} more
                       </Badge>
                     )}
                   </>

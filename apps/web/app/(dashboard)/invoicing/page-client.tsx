@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react'
 import { Plus } from 'lucide-react'
+import { useModuleStore } from '@/stores/module-store'
 import type { Invoice, Payment } from '@plio/db'
 import { InvoiceTable, type InvoiceRow } from '@/components/invoicing/invoice-table'
 import { InvoiceForm } from '@/components/invoicing/invoice-form'
@@ -24,6 +25,7 @@ interface InvoicingPageClientProps {
 }
 
 export function InvoicingPageClient({ invoices, contacts, canWrite }: InvoicingPageClientProps) {
+  const getModuleTitle = useModuleStore((s) => s.getModuleTitle)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceWithContact | null>(null)
   const [deletingInvoice, setDeletingInvoice] = useState<InvoiceRow | null>(null)
@@ -97,7 +99,7 @@ export function InvoicingPageClient({ invoices, contacts, canWrite }: InvoicingP
       <div className={`flex-1 space-y-6 transition-all ${selectedInvoice ? 'mr-[480px]' : ''}`}>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Invoicing</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{getModuleTitle('invoicing')}</h1>
             <p className="text-sm text-gray-500 mt-1">
               Create and manage invoices, track payments.
             </p>

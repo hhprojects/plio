@@ -8,7 +8,6 @@ export {
   isFutureDate,
   getDayOfWeek,
   addDays,
-  diffInHours,
   toSGDate,
 } from './date-helpers';
 
